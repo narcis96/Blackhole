@@ -1,0 +1,3 @@
+1
+player1 player1wit.txt player2 player2zwart.txt
+
