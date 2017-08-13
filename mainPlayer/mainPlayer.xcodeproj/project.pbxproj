@@ -218,6 +218,7 @@
 		57121ECA1F3274C900B17CE3 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				INSTALL_PATH = ./;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -248,6 +249,7 @@
 				57121ECB1F3274C900B17CE3 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
