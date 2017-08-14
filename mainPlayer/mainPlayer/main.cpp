@@ -14,8 +14,8 @@
 #include <ctime>
 #include <tuple>
 #include <string>
-#include <unordered_set>
 #include <set>
+#include <unordered_set>
 #include <unordered_map>
 #include <limits>
 #include <sys/types.h>
@@ -52,9 +52,7 @@ public:
             {
                 m_freeCells.insert({i, j});
             }
-		}
-        
-	}
+		}	}
 	void MarkBlocked(const int &i, const int &j)
 	{
 		CheckCell(i, j);
@@ -96,19 +94,25 @@ public:
         }
         else
         {
-            if (m_turn == 5)
+            if(m_tree.find(m_codif) == m_tree.end())
             {
-                GetMinMaxTree(1, 0LL, 15);
-                m_codif = 0;
-            }
-            else
-                if (m_turn == 9)
+#ifdef __APPLE__
+                std::cerr << CLIENT << "starts computing mix-max tree size = "<< m_freeCells.size() << std::endl << std::flush;
+#endif
+                m_dp.clear();
+                m_tree.clear();
+                int steps = 2;
+                if(m_turn >= 11)
                 {
-                    m_dp.clear();
-                    m_tree.clear();
-                    GetMinMaxTree(1, 0LL, 1);
-                    m_codif = 0;
+                    steps = 3;
                 }
+                GetMinMaxTree(1, 0LL, std::max(m_freeCells.size() - steps, 1ul));
+                m_codif = 0;
+                
+#ifdef __APPLE__
+                std::cerr << CLIENT << "finished computing mix-max tree"<< std::endl << std::flush;
+#endif
+            }
             assert(m_tree.find(m_codif) != m_tree.end() && "configuration was not found");
             answer = m_tree[m_codif];
 
@@ -117,7 +121,7 @@ public:
         int i, j, val;
         std::tie(i,j,val) = answer;
 #ifdef __APPLE__
-        std::cerr << CLIENT <<"found"<< std::get<0>(answer) << "," << std::get<1>(answer) << " " << std::get<2>(answer)<< std::endl << std::flush;
+        std::cerr << CLIENT <<"found "<< i << "," << j << " " << val << std::endl << std::flush;
 #endif
         MarkMine(i, j, val);
         m_codif = m_codif*Base + GetHash(i, j, val);
@@ -199,8 +203,13 @@ private:
         return cost;
     }
     
-    void GetMinMaxTree(const bool &turn,const unsigned long long &conf, const int &stopSize)
+    
+    
+    void GetMinMaxTree(const bool &turn,const unsigned long long &conf, const unsigned long &stopSize)
     {
+#ifdef __APPLE__
+//        std::cerr << CLIENT <<"GetMinMaxTree() turn = "<< turn << " size = " << m_freeCells.size() << " stop = " << stopSize << std::endl << std::flush;
+#endif
         if (m_freeCells.size() == stopSize)
         {
             if (stopSize == 1)
@@ -209,13 +218,25 @@ private:
             }
             else
             {
+                auto magic = [](const int x) -> double
+                {
+                    return log(x);
+                };
+                
                 for (int i = 0; i < m_dimension; i++)
                 {
                     for (int j = 0; j <= i; j++)
                     {
                         if (m_cellState[i][j] == CellState::EMPTY)
                         {
-                            m_dp[conf] += GetWin(i, j);
+                            int win = GetWin(i, j);
+                            if(win != 0)
+                            {
+                                if(win > 0)
+                                    m_dp[conf] += magic(win);
+                                else
+                                    m_dp[conf] -= magic(-win);
+                            }
                         }
                     }
                 }
@@ -355,7 +376,7 @@ private:
 	std::unordered_set <int> m_availableValues;
     std::unordered_set <int> m_opponentAvailableValues;
     std::unordered_map<unsigned long long, std::tuple<int,int,int>> m_tree;
-    std::unordered_map<unsigned long long, int> m_dp;
+    std::unordered_map<unsigned long long, double > m_dp;
     unsigned long long m_codif;
 	const int dx[6] = { 0, 0, -1, 1 ,-1, 1};
 	const int dy[6] = { 1, -1, 0, 0, -1, 1};
