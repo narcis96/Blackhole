@@ -38,36 +38,34 @@ std::pair < int, int > Battle(const char * server,
 
 int main(int argc,const char * argv[]) {
     std::vector < const char * > players;
-    const char * server;
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-p") == 0) //player
+    const char * server = NULL;
+    int rounds = 0;
+    for (int i = 1; i < argc - 1; i++) {
+        if (strcmp(argv[i], "-player") == 0) //player
         {
             i += 1;
-            if (i == argc) {
-                fprintf(stderr, "Incorrect parameters\n");
-                fflush(stderr);
-                return EXIT_FAILURE;
-            }
             players.push_back(argv[i]);
         } else {
-            if (strcmp(argv[i], "-s") == 0) //server
+            if (strcmp(argv[i], "-server") == 0) //server
             {
                 i += 1;
-                if (i == argc) {
+                server = argv[i];
+            }
+            else {
+                if (strcmp(argv[i], "-rounds") == 0){
+                    i += 1;
+                    rounds = atoi(argv[i]);
+                }else {
                     fprintf(stderr, "Incorrect parameters\n");
                     fflush(stderr);
                     return EXIT_FAILURE;
                 }
-                server = argv[i];
-            } else {
-                fprintf(stderr, "Incorrect parameters\n");
-                fflush(stderr);
-                return EXIT_FAILURE;
             }
+
         }
     }
     std::vector < int > scores(players.size(), 0);
-    for (int rounds = 1; rounds > 0; rounds--) {
+    for (int round = 1; round <= rounds; round++) {
         for (int i = 0; i < players.size(); i++)
             for (int j = i + 1; j < players.size(); j++) {
                 auto score = Battle(server, players[i], players[j]);

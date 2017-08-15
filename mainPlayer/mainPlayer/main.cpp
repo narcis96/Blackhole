@@ -9,22 +9,19 @@
 #include <iostream>
 #include <algorithm>
 #include <vector>
-#include <iterator>
 #include <cassert>
-#include <ctime>
 #include <tuple>
 #include <string>
 #include <set>
 #include <unordered_set>
 #include <unordered_map>
-#include <limits>
 #include <sys/types.h>
 #include <unistd.h>
 
 #ifdef __APPLE__
 #define CLIENT "Client (" << getpid() << ") : "
+//#define MY_DEBUG
 #endif
-
 enum class CellState {
     EMPTY,
     BLOCKED,
@@ -57,14 +54,13 @@ public:
     void MarkBlocked(const int& i, const int& j)
     {
         CheckCell(i, j);
-        m_cellState[i][j] = CellState::BLOCKED;
-        EraseCell(i, j);
+        SetCell(i, j, CellState::BLOCKED, 0);
     }
     void SetOpponetCell(const int& i, const int& j, const int& val)
     {
         CheckCell(i, j);
         SetCell(i, j, CellState::OPPONENT, val);
-        m_opponentAvailableValues.erase(val);
+        EraseVal(m_opponentAvailableValues, val);
     }
     
     std::tuple<int, int, int> GetTurn()
@@ -74,60 +70,47 @@ public:
         
         std::tuple<int, int, int> answer(-1, -1, -1);
         if (m_turn <= threshold1) {
-            long double costMax = std::numeric_limits<long double>::min();
-            int val = *std::max_element(m_availableValues.begin(), m_availableValues.end());
-            for (int i = 0; i < m_dimension; i++) {
-                for (int j = 0; j <= i; j++) {
-                    if (m_cellState[i][j] == CellState::EMPTY) {
-                        long double cost = GetCost(i, j);
-                        if (cost > costMax) {
-                            costMax = cost;
-                            answer = std::tuple<int, int, int>(i, j, val);
-                        }
-                    }
-                }
-            }
+            auto maxPos = std::max_element(m_freeCells.begin(), m_freeCells.end(), [&](const std::pair<int, int> &pos1, const std::pair<int, int> &pos2)->bool
+            {
+                return GetCost(pos1.first, pos1.second) < GetCost(pos2.first,pos2.second);
+            });
+            answer = std::tuple<int, int, int>(maxPos->first, maxPos->second, *m_availableValues.rbegin());
         }
         else {
             if (IsFinal() == true) {
+#ifdef MY_DEBUG
+                std::cerr << CLIENT << "reach final" << std::endl << std::flush;
+#endif
                 auto positions = GetLastPositions();
-                answer = std::make_tuple(positions.back().first, positions.back().second, *m_availableValues.begin());
-                for (auto position : positions) {
-                    if (GetWin(position.first, position.second) < GetWin(std::get<0>(answer), std::get<1>(answer))) {
-                        answer = std::make_tuple(position.first, position.second, *m_availableValues.begin());
-                    }
-                }
+                auto minPos = std::min_element(positions.begin(), positions.end(), [&](const std::pair<int, int> &pos1, const std::pair<int, int> &pos2)->bool
+                {
+                    return GetWin(pos1.first, pos1.second) < GetWin(pos2.first,pos2.second);
+                });
+                answer = std::make_tuple(minPos->first, minPos->second, *m_availableValues.begin());
             }
             else {
-#ifdef __APPLE__
-                std::cerr << CLIENT << "starts computing mix-max tree size = " << m_freeCells.size() << std::endl
-                << std::flush;
-#endif
                 int steps = 2;
                 if (m_turn >= 8) {
                     steps = 3;
                 }
-                if (m_turn >= 11) {
-                    steps = 4;
+                bool stopFinal = false;
+                if (m_freeCells.size()  <= 9) {
+                    stopFinal = true;
                 }
-                answer = GetMinMaxTree(1, 0LL, std::max(m_freeCells.size() - steps, 1ul)).second;
-#ifdef __APPLE__
-                std::cerr << CLIENT << "finished computing mix-max tree" << std::endl
-                << std::flush;
+#ifdef MY_DEBUG
+                std::cerr << CLIENT << "starts computing mix-max tree size = " << m_freeCells.size() << " stopFinal = " << stopFinal << std::endl << std::flush;
+#endif
+                answer = GetMinMaxTree(1, m_freeCells.size() - steps, stopFinal).second;
+#ifdef MY_DEBUG
+                std::cerr << CLIENT << "finished computing mix-max tree" << std::endl << std::flush;
 #endif
             }
         }
         
         int i, j, val;
         std::tie(i, j, val) = answer;
-        
-        if (GetNeighbors(i, j) == 0) {
-            val = *m_availableValues.begin();
-            answer = std::tuple<int, int, int>(i, j, val);
-        }
-#ifdef __APPLE__
-        std::cerr << CLIENT << "found " << i << "," << j << " " << val << std::endl
-        << std::flush;
+#ifdef MY_DEBUG
+        std::cerr << CLIENT << "found " << i << "," << j << " " << val << std::endl << std::flush;
 #endif
         MarkMine(i, j, val);
         return answer;
@@ -207,42 +190,64 @@ private:
         return cost;
     }
     
-    std::pair<double, std::tuple<int, int, int> > GetMinMaxTree(const bool& turn, const unsigned long long& conf, const unsigned long& stopSize)
+    std::pair<double, std::tuple<int, int, int> > GetMinMaxTree(const bool& turn, const unsigned long& stopSize, const bool &stopFinal)
     {
-#ifdef __APPLE__
-        //        std::cerr << CLIENT <<"GetMinMaxTree() turn = "<< turn << " size = " << m_freeCells.size() << " stop = " << stopSize << std::endl << std::flush;
+#ifdef MY_DEBUG
+        if(stopSize <= 2)
+            std::cerr << CLIENT <<"GetMinMaxTree() turn = "<< turn << " size = " << m_freeCells.size() << " stop = " << stopSize << " stopFinal = " << stopFinal << std::endl << std::flush;
 #endif
-        if (m_freeCells.size() == stopSize) {
-            if (stopSize == 1) {
-                int i = m_freeCells.begin()->first;
-                int j = m_freeCells.begin()->second;
-                int win = GetWin(i, j);
-                return std::make_pair(win, std::make_tuple(i, j, *m_availableValues.begin()));
+        if(stopFinal == true)
+        {
+#ifdef MY_DEBUG
+            std::cerr << CLIENT <<"GetMinMaxTree() IsFinal() = "<< IsFinal() << std::endl << std::flush;
+#endif
+            if(IsFinal() == true)
+            {
+                bool currentTurn = turn;
+                auto positions = GetLastPositions();
+                std::sort(positions.begin(), positions.end(), [&](const std::pair<int, int> &pos1, const std::pair<int, int> &pos2)->bool
+                {
+                        return GetWin(pos1.first, pos1.second) < GetWin(pos2.first,pos2.second);
+                });
+                while (positions.size() > 1) {
+                    if(currentTurn == 1)
+                        positions.erase(positions.begin());
+                    else
+                        positions.pop_back();
+                    currentTurn = currentTurn ^ 1;
+                }
+                return std::make_pair(GetWin(positions.back().first,positions.back().second), std::make_tuple(-1, -1, -1));
             }
-            double cost = 0;
-            auto magic = [](const int x) -> double {
-                return log(x);
-            };
-            for (int i = 0; i < m_dimension; i++) {
-                for (int j = 0; j <= i; j++) {
-                    if (m_cellState[i][j] == CellState::EMPTY) {
-                        int win = GetWin(i, j);
-                        if (win != 0) {
-                            if (win > 0)
-                                cost += magic(win);
-                            else
-                                cost -= magic(-win);
+        }
+        else
+        {
+            if (m_freeCells.size() == stopSize) {
+                double cost = 0;
+                auto magic = [](const int x) -> double {
+                    return log(x);
+                };
+                for (int i = 0; i < m_dimension; i++) {
+                    for (int j = 0; j <= i; j++) {
+                        if (m_cellState[i][j] == CellState::EMPTY) {
+                            int win = GetWin(i, j);
+                            if (win != 0) {
+                                if (win > 0)
+                                    cost += magic(win);
+                                else
+                                    cost -= magic(-win);
+                            }
                         }
                     }
                 }
+                return { cost, std::tuple<int, int, int>(-1, -1, -1) };
             }
-            return { cost, std::tuple<int, int, int>(-1, -1, -1) };
         }
         const auto cells = m_freeCells;
-        std::pair<double, std::tuple<int, int, int> > answer(0, std::make_tuple(-1, -1, -1));
-        std::unordered_set<int> availableValues;
         
-        std::unordered_set<int>* from;
+        std::pair<double, std::tuple<int, int, int> > answer(0, std::make_tuple(-1, -1, -1));
+        std::set<int> availableValues;
+        
+        std::set<int>* from;
         if (turn == 1) //my turn
         {
             answer.first = -1000;
@@ -251,23 +256,27 @@ private:
         else //opponent turn
         {
             answer.first = 1000;
-            availableValues = m_opponentAvailableValues;
             from = &m_opponentAvailableValues;
         }
         for (const auto& cell : cells) {
-            if (turn == 1) {
-                if (GetNeighbors(cell.first, cell.second) == 0) {
+            if (GetNeighbors(cell.first, cell.second) == 0) {
+                if (turn == 1) {
                     availableValues.clear();
                     availableValues.insert(*m_availableValues.begin());
                 }
-                else {
-                    availableValues = m_availableValues;
+                else{
+                    availableValues.clear();
+                    availableValues.insert(*m_opponentAvailableValues.begin());
                 }
+            }
+            else {
+                if(turn ==1)
+                    availableValues = m_availableValues;
+                else
+                    availableValues = m_opponentAvailableValues;
             }
             
             for (const auto& value : availableValues) {
-                unsigned long long sonConf = conf * Base + GetHash(cell.first, cell.second, value);
-                
                 if (turn == 1) {
                     MarkMine(cell.first, cell.second, value);
                 }
@@ -275,7 +284,7 @@ private:
                     SetOpponetCell(cell.first, cell.second, value);
                 }
                 
-                auto sonBest = GetMinMaxTree(turn ^ 1, sonConf, stopSize);
+                auto sonBest = GetMinMaxTree(turn ^ 1, stopSize, stopFinal);
                 
                 from->insert(value);
                 m_cellState[cell.first][cell.second] = CellState::EMPTY;
@@ -295,31 +304,23 @@ private:
         }
         return answer;
     }
-    unsigned long long GetHash(int i, int j, int val)
-    {
-        return (m_totalMoves + 1) * (m_totalMoves + 1) * i + (m_totalMoves + 1) * j + val;
-    }
     
     std::vector<std::pair<int, int> > GetLastPositions()
     {
         std::vector<std::pair<int, int> > positions;
-        for (int i = 0; i < m_dimension; i++) {
-            for (int j = 0; j <= i; j++)
-                if (m_cellState[i][j] == CellState::EMPTY && GetNeighbors(i, j) == 0) {
-                    positions.emplace_back(i, j);
-                }
-        }
+        for(const auto &position : m_freeCells)
+            if (GetNeighbors(position.first, position.second) == 0) {
+                positions.emplace_back(position);
+            }
         return positions;
     }
     
     bool IsFinal()
     {
-        for (int i = 0; i < m_dimension; i++) {
-            for (int j = 0; j <= i; j++)
-                if (m_cellState[i][j] == CellState::EMPTY && GetNeighbors(i, j) > 0) {
-                    return false;
-                }
-        }
+        for(const auto &position : m_freeCells)
+            if (GetNeighbors(position.first, position.second) > 0) {
+                return false;
+            }
         return true;
     }
     
@@ -328,7 +329,7 @@ private:
         CheckCell(i, j);
         assert(1 <= val && val <= m_totalMoves);
         SetCell(i, j, CellState::MINE, val);
-        EraseVal(val);
+        EraseVal(m_availableValues, val);
     }
     
     void SetCell(const int& i, const int& j, const CellState& state, const int& value)
@@ -345,23 +346,21 @@ private:
         m_freeCells.erase(it);
     }
     
-    void EraseVal(const int& val)
+    void EraseVal(std::set<int>&availableValues,const int& val)
     {
-        auto it = m_availableValues.find(val);
-        assert(it != m_availableValues.end());
-        m_availableValues.erase(it);
+        auto it = availableValues.find(val);
+        assert(it != availableValues.end());
+        availableValues.erase(it);
     }
     
     void CheckCell(const int& i, const int& j)
     {
-#ifdef __APPLE__
+#ifdef MY_DEBUG
         if (IsInterior(i, j) == false) {
-            std::cerr << CLIENT << i << "," << j << "is out of boundaries" << std::endl
-            << std::flush;
+            std::cerr << CLIENT << i << "," << j << "is out of boundaries" << std::endl << std::flush;
         }
         if (m_cellState[i][j] != CellState::EMPTY) {
-            std::cerr << CLIENT << i << "," << j << " is not empty" << std::endl
-            << std::flush;
+            std::cerr << CLIENT << i << "," << j << " is not empty" << std::endl << std::flush;
         }
 #endif
         assert(IsInterior(i, j));
@@ -379,12 +378,11 @@ private:
     std::vector<std::vector<CellState> > m_cellState;
     std::vector<std::vector<int> > m_cellValue;
     std::set<std::pair<int, int> > m_freeCells;
-    std::unordered_set<int> m_availableValues;
-    std::unordered_set<int> m_opponentAvailableValues;
+    std::set<int> m_availableValues;
+    std::set<int> m_opponentAvailableValues;
     unsigned long long m_codif;
     const int dx[6] = { 0, 0, -1, 1, -1, 1 };
     const int dy[6] = { 1, -1, 0, 0, -1, 1 };
-    static const int Base = 2111;
     static const int threshold1 = 4;
 };
 
@@ -406,9 +404,8 @@ int main(int argc, const char* argv[])
         
         int i, j;
         std::tie(i, j) = ConvertToIndex(line, pos);
-#ifdef __APPLE__
-        std::cerr << CLIENT << "OpponentTurn() " << command << std::endl
-        << std::flush;
+#ifdef MY_DEBUG
+        std::cerr << CLIENT << "OpponentTurn() " << command << std::endl << std::flush;
 #endif
         solver.SetOpponetCell(i, j, val);
     };
@@ -420,12 +417,10 @@ int main(int argc, const char* argv[])
         
         char line, pos;
         std::tie(line, pos) = ConvertToCell(i, j);
-#ifdef __APPLE__
-        std::cerr << CLIENT << line << pos << "=" << val << std::endl
-        << std::flush;
+#ifdef MY_DEBUG
+        std::cerr << CLIENT << line << pos << "=" << val << std::endl << std::flush;
 #endif
-        std::cout << line << pos << "=" << val << std::endl
-        << std::flush;
+        std::cout << line << pos << "=" << val << std::endl << std::flush;
         
     };
     for (int i = 0; i < countBlocked; i++) {
@@ -433,9 +428,8 @@ int main(int argc, const char* argv[])
         std::cin >> line >> pos;
         auto indx = ConvertToIndex(line, pos);
         solver.MarkBlocked(indx.first, indx.second);
-#ifdef __APPLE__
-        std::cerr << CLIENT << line << pos << std::endl
-        << std::flush;
+#ifdef MY_DEBUG
+        std::cerr << CLIENT << line << pos << std::endl << std::flush;
 #endif
     }
     std::string command;
@@ -443,9 +437,8 @@ int main(int argc, const char* argv[])
     CellState turn;
     if (command == "Start") {
         turn = CellState::MINE;
-#ifdef __APPLE__
-        std::cerr << CLIENT << "Start" << std::endl
-        << std::flush;
+#ifdef MY_DEBUG
+        std::cerr << CLIENT << "Start" << std::endl << std::flush;
 #endif
     }
     else {

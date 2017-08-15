@@ -1,3 +1,0 @@
-1
-mainPlayer player1wit.txt mainPlayer2 player2zwart.txt
-

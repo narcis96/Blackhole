@@ -5,10 +5,10 @@
 //  Created by Gemene Narcis on 13/08/2017.
 //  Copyright © 2017 Gemene Narcis. All rights reserved.
 //
-#include <stdio.h>
+#include <cstdio>
 #include <string>
-#include <stdlib.h>
-#include <time.h>
+#include <cstdlib>
+#include <ctime>
 #include <algorithm>
 #include <sstream>
 #include <set>
@@ -79,6 +79,7 @@ int main(int argc, const char* argv[]) {
     const char* player1 = argv[1];
     const char* player2 = argv[2];
     for (int first = 0; first < 2; first++) {
+        clock_t start = clock();
         FILE* clients[2];
         clients[0] = popen(player1, "r+");
         clients[1] = popen(player2, "r+");
@@ -156,6 +157,8 @@ int main(int argc, const char* argv[]) {
                 return EXIT_FAILURE;
             }
         }
+        fprintf(stderr, "time =  %f\n", (double)(clock()-start)/CLOCKS_PER_SEC);
+        fflush(stderr);
     }
     //fprintf (stderr, "Time:\n1:%Lf 2:%Lf\n", timeElapsed[0], timeElapsed[1]);
     //fflush (stderr);
