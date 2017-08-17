@@ -65,8 +65,14 @@ std::pair<int, int> GetEmptyCell(const std::vector<std::vector<int> >& states, c
 }
 
 int main(int argc, const char* argv[]) {
+	if (argc < 3) {
+		fprintf(stdout, "Not enough parameters");
+        fflush(stdout);
+		return EXIT_FAILURE;
+	}
     const int blockedCells = 5;
     const unsigned long dimension = 8;
+	const int moves = 15;
     srand((unsigned int)time(0));
     auto ConvertToIndex = [](const char& line, const char& pos) -> std::pair<int, int> {
         return { line - 'A' + pos - '1', pos - '1' };
@@ -116,7 +122,7 @@ int main(int argc, const char* argv[]) {
         fflush(clients[first]);
         int turn = first;
         char buff[100];
-        for (int i = 1; i <= 30; i++) {
+        for (int i = 1; i <= 2*moves; i++) {
             if (fgets(buff, 100, clients[turn]) == NULL) {
                 fprintf(stderr, "fgets() failed at step %d\n", i);
                 fflush(stderr);
@@ -129,7 +135,7 @@ int main(int argc, const char* argv[]) {
             
             assert(IsInterior(dimension, x, y) && "Server :Index out of boundaries");
             assert(values[x][y] == 0 && states[x][y] != -1 && "Server :Not a valid move, the cell is not empty");
-            assert(1 <= val && val <= 15 && "Server: Not a valid move, value is wrong");
+            assert(1 <= val && val <= moves && "Server: Not a valid move, value is wrong");
             
             //fprintf (stderr, "Server : turn %d\n", i);
             //fflush (stderr);
