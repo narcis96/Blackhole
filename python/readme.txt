@@ -1,0 +1,1 @@
+python script.py -source ../mainPlayer/mainPlayer/main.cpp -server ../Server/Server/main.cpp -manager ../Manager/Manager/main.cpp -bots 0 -rounds 1
