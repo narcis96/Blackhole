@@ -9,8 +9,8 @@ class DNA(object):
 
         for i in range(1, len(self.__arhitecture)):
             hiddenLayer = list()
-            for j in range(len(i)):
-                neuron = [{'weights':[random() for j in range(len(networkArhitecture[i-1]) + 1)]}] #+1 for bias, -1 for last layer
+            for j in range(len(self.__arhitecture[i])):
+                neuron = [{'weights':[random() for j in range(len(self.__arhitecture[i-1]) + 1)]}] #+1 for bias, -1 for last layer
                 hiddenLayer.append(neuron)
             self.__network.append(hiddenLayer)
 
