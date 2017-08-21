@@ -45,7 +45,7 @@ if __name__ == '__main__':
     serverExecutable = './server'
     managerName = 'manager'
     managerExecutable = './manager'
-	
+    
     if Compile(sourcePath, sourceName) != 0 or Compile(serverPath, serverName) != 0 or Compile(managerPath, managerName) != 0:
         sys.exit(-1)
     print ('Compile successful')
