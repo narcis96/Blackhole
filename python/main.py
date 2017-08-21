@@ -9,19 +9,7 @@ from array import *
 class NeuralNetwork:
 
     def __init__(self, layers):
-        network = list()
-
-        # for i in range(len(layers)):
-        # ....hidden_layer = [{'weights':[random() for j in range(layers[i] + 1)]}]
-        # ....network.append(hidden_layer)
-        # output_layer = [{'weights':[random() for i in range(n_hidden + 1)]} for i in range(n_outputs)]
-        # network.append(output_layer)
-
-        # hidden_layer = [{'weights':[random() for i in range(layers[i] + 1)]} for i in range(len(layers))]
-
-        network = layers
-
-        self.network = network
+        self.__network = layers
 
     def __activate(self, weights, inputs):
         activation = weights[-1]  # bias
@@ -36,21 +24,18 @@ class NeuralNetwork:
 
     def __forward_propagate(self, row):
         inputs = row
-        for layer in self.network:
+        for layer in self.__network:
             new_inputs = []
-            print(inputs)
             for neuron in layer:
                 activation = self.__activate(neuron['weights'], inputs)
                 neuron['output'] = self.__transfer(activation)
-                print(activation)
-                print(neuron['output'])
                 new_inputs.append(neuron['output'])
             inputs = new_inputs
         return inputs
 
     def __str__(self):
         string = ''
-        for layer in self.network:
+        for layer in self.__network:
             string += str(layer) + '\n'
         return string
 
@@ -76,9 +61,8 @@ class Player:
         self.__values[index] = value
 
     def GetTurn(self):
-        outputs = self.__forward_propagate(row)
+        outputs = neuralNetwork.predict(self.__positions)
         print(outputs)
-        return 1,4
         return outputs[0].index(max(outputs[0])), outputs[1].index(max(outputs[1]))
    
 def ParseParameters(arguments):
@@ -90,10 +74,11 @@ def ParseParameters(arguments):
         blockedCells = 5
         moves = 15
     else:
-        with open(sys.argv[1]) as data_file:    
-            layers = json.load(data_file)
+        path = sys.argv[sys.argv.index('-path') + 1]
         blockedCells = sys.argv[sys.argv.index('-blockedCells') + 1]
         moves = sys.argv[sys.argv.index('-moves') + 1]
+        with open(path) as data_file:
+            layers = json.load(data_file)
 
     return layers, blockedCells, moves
 

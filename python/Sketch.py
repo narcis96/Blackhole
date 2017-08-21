@@ -1,31 +1,44 @@
 import sys, os, subprocess, platform, json
-import Population
+from Population import  Population
+import statistics as stats
 class Sketch(object):
     def __init__(self, name):
         self.__name = name
-    def setup(self, count):
-        self.__population = Population(count)
-    def run(self):
+    def setup(self, population, arhitecture, mutationRate):
+        self.__population = Population(population, arhitecture,mutationRate)
+
+    def __Print(self, generation, scores):
+        average = stats.mean(scores)
+        os.makedirs(str(generation))
+
+        for i, score in scores:
+            print(score, file='./' + str(generation) + '/'+ str(i) + '.txt')
+
+        for i, dna in population.population:
+            dna.WriteJson('./' + str(generation) + '/' + str(i) + '.json')
+
+        print('generation:', str(generation), 'average score:', average)
+
+    def run(self,):
+        generation = 1
         while True:
-            x = x + 1
+            scores = population.CalcFitness()
+            self.__Print(generation, scores)
+            population.NaturalSelection()
+            population.Generate()
+            generation = generation + 1
+
 
 if __name__ == '__main__':
-    fileName = 'data.json'
-    command = list()
-    command.append(sys.executable)
-    command.append('main.py')
-    layers = [
-            [{'weights': [1, 0, 0]}],
-            [{'weights': [1, 0]}, {'weights': [-1, 0]}, {'weights': [1, 0]}, {'weights': [-1, 0]}]
-            ]
-    with open(fileName, 'w') as outfile:
-        json.dump(layers, outfile)
-
-    command.append(fileName)
-    proc = subprocess.Popen(command, stdout=subprocess.PIPE)
-    output, error = proc.communicate()
-    for line in output.splitlines():
-        print(line)
     population = sys.argv[sys.argv.index('-population') + 1]
-    runner  = Sketch(population) 
+    mutationRate = sys.argv[sys.argv.index('-mutation') + 1]
+    sourcePath = sys.argv[sys.argv.index('-source') + 1]
+    serverPath = sys.argv[sys.argv.index('-server') + 1]
+    managerPath = sys.argv[sys.argv.index('-manager') + 1]
+    arhitecture = [3, 30, 30]
+
+    runner  = Sketch(population)
+    runner.setup(population, arhitecture, mutationRate)
+
+
 
