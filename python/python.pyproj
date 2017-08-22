@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{75c443ea-150f-4a88-a592-6fd68fefa4bb}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>main.py</StartupFile>
+    <StartupFile>test.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -22,11 +22,15 @@
     <Content Include="readme.txt" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bots.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="DNA.py" />
     <Compile Include="main.py" />
     <Compile Include="Population.py" />
     <Compile Include="script.py" />
     <Compile Include="Sketch.py" />
+    <Compile Include="test.py" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
 </Project>

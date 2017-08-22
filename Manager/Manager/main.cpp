@@ -53,6 +53,7 @@ int main(int argc, const char* argv[])
     std::vector<const char*> players;
     const char* server = NULL;
     int rounds = 0;
+	bool debug = false
     std::atomic<int> availableThreads;
     availableThreads = std::thread::hardware_concurrency() - 1; //- main thread
     for (int i = 1; i < argc - 1; i++) {
@@ -69,7 +70,10 @@ int main(int argc, const char* argv[])
                 if (strcmp(argv[i], "-rounds") == 0) {
                     i += 1;
                     rounds = atoi(argv[i]);
-                } else {
+                } if (strcmp(argv[i], "-debug") == 0) {
+                    debug = true;
+                } 
+				else {
                     fprintf(stderr, "Manager: Incorrect parameters\n");
                     fflush(stderr);
                     return EXIT_FAILURE;
@@ -98,19 +102,21 @@ int main(int argc, const char* argv[])
                 availableThreads -= 1;
                 threads.emplace_back(Battle, server, players[i], i, players[j], j,
                                      [&myMutex, &scores, &matches, players,
-                                      &availableThreads](int player1Index, int player2Index,
+                                      &availableThreads, &debug](int player1Index, int player2Index,
                                                          int player1Score, int player2Score) {
                                          
                                          std::lock_guard<std::mutex> myLock(myMutex);
                                          scores[player1Index] += player1Score;
                                          scores[player2Index] += player2Score;
                                          matches += 1;
-                                         fprintf(stderr, "After match:%d\n", matches);
-                                         for (int i = 0; i < players.size(); i++) {
-                                             fprintf(stderr, "%d ", scores[i]);
-                                         }
-                                         fprintf(stderr, "\n");
-                                         fflush(stderr);
+										 if (debug == true) {
+	                                         fprintf(stderr, "After match:%d\n", matches);
+	                                         for (int i = 0; i < players.size(); i++) {
+	                                             fprintf(stderr, "%d ", scores[i]);
+	                                         }
+	                                         fprintf(stderr, "\n");
+	                                         fflush(stderr);
+										 }
                                          availableThreads += 1;
                                      });
             }

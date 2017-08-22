@@ -1,7 +1,9 @@
-from DNA import  DNA
 import os
 from math import floor
 from random import random
+from DNA import  DNA
+from script import Battle, Compile
+
 class Population(object):
     def __init__(self, count, arhitecture, mutationRate):
         self.__count = count
@@ -11,6 +13,7 @@ class Population(object):
 
         os.makedirs('temp')
         self.__names = ['./temp/' + str(i) + '.json' for i in range (count)]
+
 
     def CalcFitness(self):
         self.__scores = [0 for i in range(self.__count)]

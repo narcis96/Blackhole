@@ -181,8 +181,7 @@ int main(int argc, const char* argv[])
         }
         
         std::pair<int, int> emptyCell = GetEmptyCell(states, values);
-        points[first] =
-        GetPoints(states, values, emptyCell.first, emptyCell.second);
+        points[first] = GetPoints(states, values, emptyCell.first, emptyCell.second);
         for (auto& client : clients) {
             int status = pclose(client);
             if (status == -1) {
