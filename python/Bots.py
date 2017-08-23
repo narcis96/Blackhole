@@ -14,6 +14,12 @@ class CBot(object):
                + ' -step3 ' + str(self.__step3) + ' -step4 ' + str(self.__step4)\
                + ' -stopFinal ' + str(self.__stopFinal) + ' -erase ' + str(self.__toErase)
 
+    def _asdict(self):
+        return self.__dict__
+
+    def defto_json(self):
+        return self.__dict__
+
 class PythonBot(object):
     def __init__(self, executable, path, blockedCells, moves):
         self.executable = executable
