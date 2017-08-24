@@ -10,7 +10,7 @@ class DNA(object):
         for i in range(1, len(self.__arhitecture)):
             hiddenLayer = list()
             for j in range(self.__arhitecture[i]):
-                neuron = [{'weights':[random() for j in range(self.__arhitecture[i - 1] + 1)]}] #+1 for bias, -1 for last layer
+                neuron = [{'weights':[random()*100 for j in range(self.__arhitecture[i - 1] + 1)]}] #+1 for bias, -1 for last layer
                 hiddenLayer.append(neuron)
             self.__network.append(hiddenLayer)
 
@@ -29,7 +29,7 @@ class DNA(object):
         for i,layer in self.__network:
             for j,neuron in layer:
                 if (random(1) < mutationRate):
-                    self.__network[i][j]['weights'] = [random() for i in range(len(neuron['weights']))]
+                    self.__network[i][j]['weights'] = [random()*100 for i in range(len(neuron['weights']))]
 
     def __str__(self):
         str(self.__network)

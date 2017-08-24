@@ -1,0 +1,14 @@
+{
+    "population": 4,
+    "mutation": 0.01,
+	"arhitecture": [3,10,10],
+    "source": "/mainPlayer/mainPlayer/main.cpp",
+    "server": "../Server/Server/main.cpp",
+    "manager": "../Manager/Manager/main.cpp",
+	"managerName": "manager",
+	"serverName": "server",
+    "rounds": 1,
+    "graphPath": "ala",
+	"blockedCells": 5,
+	"moves" : 15
+}

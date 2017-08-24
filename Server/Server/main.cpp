@@ -79,14 +79,56 @@ int main(int argc, const char* argv[])
     assert(0 && "Windows does not support popen()");
     return EXIT_FAILURE;
 #endif
-    if (argc < 3) {
+    if (argc < 4) {
         fprintf(stdout, "Not enough parameters");
         fflush(stdout);
         return EXIT_FAILURE;
     }
-    const int blockedCells = 5;
+	const char* player1 = NULL;
+	const char* player2 = NULL;
+	const char* graphPath = NULL;
+	int blockedCells = -1, moves = -1;
+	for (int i = 1; i < argc - 1; i++) {
+        if (strcmp(argv[i], "-player1") == 0) // player
+        {
+            i += 1;
+            player1 = argv[i];
+        } else {
+            if (strcmp(argv[i], "-player2") == 0) // server
+            {
+                i += 1;
+            	player2 = argv[i];
+            } else {
+                if (strcmp(argv[i], "-graphPath") == 0) {
+                    i += 1;
+                    graphPath = argv[i];
+                }  
+				else
+					 if (strcmp(argv[i], "-blockedCells") == 0) {
+						i += 1;
+						blockedCells = argv[i];
+					}  
+					else
+					 if (strcmp(argv[i], "-moves") == 0) {
+						i += 1;
+						moves = argv[i];
+					} 
+				else {
+                    fprintf(stderr, "Manager: Incorrect parameters!\n Found:%s\n", argv[i]);
+                    fflush(stderr);
+                    return EXIT_FAILURE;
+                }
+            }
+        }
+    }
+	assert(player1 != NULL);
+	assert(player2 != NULL);
+	assert(blockedCells != -1);
+	assert(moves != -1);
+	
+	int total = 2*moves + blockedCells + 1;
+	
     const unsigned long dimension = 8;
-    const int moves = 15;
     srand((unsigned int)time(0));
     
     auto ConvertToIndex = [](const char& line,
@@ -99,8 +141,6 @@ int main(int argc, const char* argv[])
         return { i + 'A' - j, j + '1' };
     };
     std::pair<int, int> points[2];
-    const char* player1 = argv[1];
-    const char* player2 = argv[2];
 #ifdef MY_DEBUG
     fprintf(stderr, "Server Started:\n");
     fprintf(stderr, "player1 = %s\nplayer2 = %s\n", player1, player2);

@@ -14,7 +14,7 @@ def GetManager(managerExecutable, serverExecutable, rounds, players, debug):
     command.append(serverExecutable)
     for player in players:
         command.append('-player')
-        command.append(player.executable + ' ' + str(player))
+        command.append(str(player))
     if debug == True :
         command.append('-debug')
         command.append('1')

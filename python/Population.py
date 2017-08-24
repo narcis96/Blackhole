@@ -5,30 +5,25 @@ from DNA import  DNA
 from script import Battle
 from Bots import  PythonBot
 class Population(object):
-    def __init__(self, count, mutationRate, arhitecture, managerName, serverName,toBattle, rounds):
+    def __init__(self, count, mutationRate, arhitecture):
         self.__count = count
         self.__mutationRate = mutationRate
         self.__population = [DNA(arhitecture) for i in range(count)]
         self.__scores = [0 for i in range(count)]
 
-        self.__managerName = managerName
-        self.__serverName = serverName
-        self.__toBattle = toBattle
-        self.__rounds = rounds
         os.makedirs('temp', exist_ok = True)
         self.__names = ['./temp/' + str(i) + '.json' for i in range (count)]
 
 
-    def CalcFitness(self):
+    def CalcFitness(self, managerName, serverName, rounds):
         bots = []
         for i in range(len(self.__population)):
             self.__population[i].WriteJson(self.__names[i])
-            bots.append(PythonBot('python main.py', self.__names[i], 5, 15))
-        bots.extend(self.__toBattle)
-        scores = Battle(self.__managerName, self.__serverName, self.__rounds, bots, debug = True)
+            bots.append(PythonBot('python main.py', self.__names[i], 5, self.__rounds))
+        scores = Battle(managerName, serverName, rounds, bots, debug = True)
 
         self.__scores = scores[0:self.__count]
-        return  self.__scores
+        return self.__scores
 
     def NaturalSelection(self):
         maxScore = max(self.__scores)
