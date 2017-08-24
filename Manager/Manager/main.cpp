@@ -15,15 +15,10 @@
 #include <thread>
 #include <chrono>
 #include <functional>
-void Battle(const char* server, const char* player1, int player1Index,
-       const char* player2, int player2Index,
+void Battle(const char* cmd, int player1Index, int player2Index,
        std::function<void(int, int, int, int)> callback)
 {
-    
-    std::string cmd = std::string(server) + " \"" + std::string(player1) +
-    "\" \"" + std::string(player2) + "\"";
-    
-    FILE* pipe = popen(cmd.c_str(), "r+");
+    FILE* pipe = popen(cmd, "r+");
     if (pipe == NULL) {
         fprintf(stderr, "popen() failed");
         exit(EXIT_FAILURE);
@@ -43,6 +38,20 @@ void Battle(const char* server, const char* player1, int player1Index,
     }
     callback(player1Index, player2Index, player1Score, player2Score);
 }
+std::vector<const char*> GetParam(int argc,const char* argv[], const char* option, bool more = false) {
+    std::vector<const char*>values;
+    for (int i = 1; i < argc - 1; i += 2)
+        if (strcmp(argv[i], option) == 0)
+        {
+            values.push_back(argv[i+1]);
+        }
+    if (values.empty() == true || (more == false && values.size() > 1)) {
+        fprintf(stdout,"Parameter %s not found ", option);
+        fflush(stdout);
+        exit(EXIT_FAILURE);
+    }
+    return values;
+}
 
 int main(int argc, const char* argv[])
 {
@@ -50,39 +59,22 @@ int main(int argc, const char* argv[])
     assert(0 && "Windows does not support popen()");
     return EXIT_FAILURE;
 #endif
-    std::vector<const char*> players;
-    const char* server = NULL;
-    int rounds = 0;
-    bool debug = false;
+    auto Add = [](std::string &cmd, const std::string& option, const std::string &value)
+    {
+        cmd += " " + option +  " \"" + value + "\"";
+    };
+    
     std::atomic<int> availableThreads;
     availableThreads = std::thread::hardware_concurrency() - 1; //- main thread
-    for (int i = 1; i < argc - 1; i++) {
-        if (strcmp(argv[i], "-player") == 0) // player
-        {
-            i += 1;
-            players.push_back(argv[i]);
-        } else {
-            if (strcmp(argv[i], "-server") == 0) // server
-            {
-                i += 1;
-                server = argv[i];
-            } else {
-                if (strcmp(argv[i], "-rounds") == 0) {
-                    i += 1;
-                    rounds = atoi(argv[i]);
-                } 
-                else if (strcmp(argv[i], "-debug") == 0) {
-                    i += 1;
-                    debug = atoi(argv[i]);;
-                } 
-				else {
-                    fprintf(stderr, "Manager: Incorrect parameters!\n Found:%s\n", argv[i]);
-                    fflush(stderr);
-                    return EXIT_FAILURE;
-                }
-            }
-        }
-    }
+
+    std::vector<const char*> players = GetParam(argc,argv,"-player", true);
+    const char* server = GetParam(argc,argv,"-server").back();
+    const int rounds = atoi(GetParam(argc,argv, "-rounds").back());
+    const char* graphPath = GetParam(argc,argv,"-graphPath").back();
+    const int blockedCells = atoi(GetParam(argc,argv,"-blockedCells").back());
+    const int moves = atoi(GetParam(argc,argv, "-moves").back());
+    const bool debug = atoi(GetParam(argc,argv, "-debug").back());
+    
     assert(rounds > 0);
     assert(server != NULL);
     assert(players.size() >= 2);
@@ -104,7 +96,15 @@ int main(int argc, const char* argv[])
                     std::this_thread::sleep_for(std::chrono::seconds(1));
                 }
                 availableThreads -= 1;
-                threads.emplace_back(Battle, server, players[i], i, players[j], j,
+                
+                std::string cmd = server;
+                Add(cmd,"-player1", players[i]);
+                Add(cmd,"-player2", players[j]);
+                Add(cmd,"-graphPath", graphPath);
+                Add(cmd,"-blockedCells", std::to_string(blockedCells));
+                Add(cmd,"-moves", std::to_string(moves));
+                Add(cmd,"-debug", std::to_string(debug));
+                threads.emplace_back(Battle, cmd.c_str(), i, j,
                                      [&myMutex, &scores, &matches, players,
                                       &availableThreads, &debug](int player1Index, int player2Index,
                                                          int player1Score, int player2Score) {

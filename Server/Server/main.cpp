@@ -15,62 +15,67 @@
 #include <vector>
 #include <cassert>
 #include <tuple>
-#ifdef __APPLE__
-#include <sys/syslimits.h>
-#elif __linux__
-#include <linux/limits.h>
-#endif
-#ifdef _WIN32
-#include <Windows.h>
-#endif
-
-//#define MY_DEBUG
+#include <fstream>
 
 bool IsInterior(const unsigned long& dim, const int& i, const int& j)
 {
     return (0 <= i && i < dim && 0 <= j && j <= i);
 }
 
-std::pair<int, int> GetPoints(const std::vector<std::vector<int>>& states,
-          const std::vector<std::vector<int>>& values, const int& i,
-          const int& j)
+std::pair<int, int> GetPoints(const std::vector<int>& states,
+                              const std::vector<int>& values, const std::vector<int>&neighbors)
 {
-    static const int dx[6] = { 0, 0, -1, 1, -1, 1 };
-    static const int dy[6] = { 1, -1, 0, 0, -1, 1 };
-    
-    int size = sizeof(dx) / sizeof(*dx);
-    std::pair<int, int> points(75, 75);
-    for (int pos = 0; pos < size; ++pos) {
-        int x = i + dx[pos];
-        int y = j + dy[pos];
-        if (IsInterior(states.size(), x, y)) {
-            if (states[x][y] == 0) {
-                points.first += values[x][y];
-                points.second -= values[x][y];
-            } else {
-                points.second += values[x][y];
-                points.first -= values[x][y];
-            }
+    std::pair< int, int> points;
+    for (const auto &x: neighbors)
+        if (states[x] == 0) {
+            points.first += values[x];
+            points.second -= values[x];
+        } else {
+            points.second += values[x];
+            points.first -= values[x];
         }
-    }
     return points;
 }
-std::pair<int, int> GetEmptyCell(const std::vector<std::vector<int>>& states,
-             const std::vector<std::vector<int>>& values)
+int GetEmptyCell(const std::vector<int>& states, const std::vector<int>& values)
 {
     int count = 0;
-    std::pair<int, int> emptyCell;
+    int emptyCell = 0;
     for (int i = 0; i < states.size(); i++) {
-        for (int j = 0; j <= i; j++) {
-            if (values[i][j] == 0 && states[i][j] != -1) // the cell is empty
-            {
-                count += 1;
-                assert(count == 1 && "More that one cell empty");
-                emptyCell = { i, j };
-            }
+        if (values[i] == 0 && states[i] != -1) // the cell is empty
+        {
+            count += 1;
+            assert(count == 1 && "More that one cell empty");
+            emptyCell = i;
         }
     }
     return emptyCell;
+}
+
+std::vector<std::vector<int>>ReadGraph(const char* graphPath) {
+    std::ifstream f(graphPath);
+    int n, m;
+    f >> n >> m;
+    std::vector<std::vector<int>>graph(n, std::vector<int>());
+    while(m-- > 0) {
+        int x, y;
+        f >> x >> y;
+        graph[x].push_back(y);
+        graph[y].push_back(x);
+    }
+    f.close();
+    return graph;
+}
+
+const char* GetParam(int argc,const char* argv[], const char* option) {
+    for (int i = 1; i < argc - 1; i += 2)
+        if (strcmp(argv[i], option) == 0)
+        {
+            i += 1;
+            return argv[i];
+        }
+    fprintf(stdout,"Parameter %s not found ", option);
+    fflush(stdout);
+    exit(EXIT_FAILURE);
 }
 
 int main(int argc, const char* argv[])
@@ -84,68 +89,29 @@ int main(int argc, const char* argv[])
         fflush(stdout);
         return EXIT_FAILURE;
     }
-	const char* player1 = NULL;
-	const char* player2 = NULL;
-	const char* graphPath = NULL;
-	int blockedCells = -1, moves = -1;
-	for (int i = 1; i < argc - 1; i++) {
-        if (strcmp(argv[i], "-player1") == 0) // player
-        {
-            i += 1;
-            player1 = argv[i];
-        } else {
-            if (strcmp(argv[i], "-player2") == 0) // server
-            {
-                i += 1;
-            	player2 = argv[i];
-            } else {
-                if (strcmp(argv[i], "-graphPath") == 0) {
-                    i += 1;
-                    graphPath = argv[i];
-                }  
-				else
-					 if (strcmp(argv[i], "-blockedCells") == 0) {
-						i += 1;
-						blockedCells = argv[i];
-					}  
-					else
-					 if (strcmp(argv[i], "-moves") == 0) {
-						i += 1;
-						moves = argv[i];
-					} 
-				else {
-                    fprintf(stderr, "Manager: Incorrect parameters!\n Found:%s\n", argv[i]);
-                    fflush(stderr);
-                    return EXIT_FAILURE;
-                }
-            }
-        }
-    }
-	assert(player1 != NULL);
-	assert(player2 != NULL);
-	assert(blockedCells != -1);
-	assert(moves != -1);
-	
-	int total = 2*moves + blockedCells + 1;
-	
-    const unsigned long dimension = 8;
+    const char* player1 = GetParam(argc, argv, "-player1");
+    const char* player2 = GetParam(argc, argv, "-player2");
+    const char* graphPath = GetParam(argc,argv,"-graphPath");
+    const int blockedCells = atoi(GetParam(argc,argv,"-blockedCells"));
+    const int moves = atoi(GetParam(argc,argv, "-moves"));
+    const bool debug = atoi(GetParam(argc,argv, "-debug"));
+    
+    assert(player1 != NULL);
+    assert(player2 != NULL);
+    assert(blockedCells != -1);
+    assert(moves != -1);
+    
+    std::vector < std::vector <int > > graph = ReadGraph(graphPath);
+    int total = 2 * moves + blockedCells + 1;
+    
     srand((unsigned int)time(0));
     
-    auto ConvertToIndex = [](const char& line,
-                             const char& pos) -> std::tuple<int, int> {
-        return { line - 'A' + pos - '1', pos - '1' };
-    };
-    
-    auto ConvertToCell = [](const int& i,
-                            const int& j) -> std::tuple<char, char> {
-        return { i + 'A' - j, j + '1' };
-    };
     std::pair<int, int> points[2];
-#ifdef MY_DEBUG
-    fprintf(stderr, "Server Started:\n");
-    fprintf(stderr, "player1 = %s\nplayer2 = %s\n", player1, player2);
-    fflush(stderr);
-#endif
+    if (debug == true) {
+        fprintf(stderr, "Server Started:\n");
+        fprintf(stderr, "player1 = %s\nplayer2 = %s\n", player1, player2);
+        fflush(stderr);
+    }
     for (int first = 0; first < 2; first++) {
         clock_t start = clock();
         FILE* clients[2];
@@ -157,27 +123,23 @@ int main(int argc, const char* argv[])
             fprintf(stderr, "popen() failed");
             return EXIT_FAILURE;
         }
-        std::vector<std::vector<int>> values(dimension,
-                                             std::vector<int>(dimension, 0));
-        std::vector<std::vector<int>> states(dimension,
-                                             std::vector<int>(dimension, 0));
+        std::vector<int> values(graph.size(),0);
+        std::vector<int> states(graph.size(),0);
         
         for (int i = 1; i <= blockedCells; i++) {
-            int x, y;
+            int x;
             do {
-                x = rand() % dimension;
-                y = rand() % (x + 1);
-            } while (states[x][y] != 0);
+                x = rand() % graph.size();
+            } while (states[x] != 0);
             
-            states[x][y] = -1;
+            states[x] = -1;
             
-            auto pos = ConvertToCell(x, y);
             std::stringstream buff;
-            buff << std::get<0>(pos) << std::get<1>(pos);
-#ifdef MY_DEBUG
-            fprintf(stderr, "Server wrote:%s\n", buff.str().c_str());
-            fflush(stderr);
-#endif
+            buff << x;
+            if (debug == true) {
+                fprintf(stderr, "Server wrote:%s\n", buff.str().c_str());
+                fflush(stderr);
+            }
             for (int id = 0; id < 2; id++) {
                 fprintf(clients[id], "%s\n", buff.str().c_str());
                 fflush(clients[id]);
@@ -185,10 +147,10 @@ int main(int argc, const char* argv[])
         }
         fprintf(clients[first], "Start\n");
         fflush(clients[first]);
-#ifdef MY_DEBUG
-        fprintf(stderr, "Server wrote: Start\n");
-        fflush(stderr);
-#endif
+        if (debug == true) {
+            fprintf(stderr, "Server wrote: Start\n");
+            fflush(stderr);
+        }
         int turn = first;
         char buff[100];
         for (int i = 1; i <= 2 * moves; i++) {
@@ -197,22 +159,19 @@ int main(int argc, const char* argv[])
                 fflush(stderr);
                 return EXIT_FAILURE;
             }
-            char line, pos;
-            int val, x, y;
-            sscanf(buff, "%c%c=%d", &line, &pos, &val);
-            std::tie(x, y) = ConvertToIndex(line, pos);
-            
-            assert(IsInterior(dimension, x, y) && "Server :Index out of boundaries");
-            assert(values[x][y] == 0 && states[x][y] != -1 &&
+            int indx, val;
+            sscanf(buff, "%d=%d", &indx, &val);
+            assert(0 <= indx  && indx < graph.size() && "Server :Index out of boundaries");
+            assert(values[indx] == 0 && states[indx] != -1 &&
                    "Server :Not a valid move, the cell is not empty");
             assert(1 <= val && val <= moves &&
                    "Server: Not a valid move, value is wrong");
-#ifdef MY_DEBUG
-            fprintf(stderr, "Server : turn %d\n", i);
-            fflush(stderr);
-#endif
-            states[x][y] = turn;
-            values[x][y] = val;
+            if (debug == true) {
+                fprintf(stderr, "Server : turn %d\n", i);
+                fflush(stderr);
+            }
+            states[indx] = turn;
+            values[indx] = val;
             
             turn = turn ^ 1;
             
@@ -220,8 +179,8 @@ int main(int argc, const char* argv[])
             fflush(clients[turn]);
         }
         
-        std::pair<int, int> emptyCell = GetEmptyCell(states, values);
-        points[first] = GetPoints(states, values, emptyCell.first, emptyCell.second);
+        int emptyCell = GetEmptyCell(states, values);
+        points[first] = GetPoints(states, values, graph[emptyCell]);
         for (auto& client : clients) {
             int status = pclose(client);
             if (status == -1) {
@@ -234,11 +193,9 @@ int main(int argc, const char* argv[])
         //    fflush(stderr);
     }
     
-#ifdef MY_DEBUG
     //	fprintf (stderr, "Time:\n1:%Lf 2:%Lf\n", timeElapsed[0],
     // timeElapsed[1]);
     //    fflush (stderr);
-#endif
     for (const auto& score : points) {
         fprintf(stdout, "%d %d\n", score.first, score.second);
         fflush(stdout);
