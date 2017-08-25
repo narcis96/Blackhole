@@ -1,14 +1,17 @@
 {
     "population": 4,
     "mutation": 0.01,
-	"arhitecture": [3,10,10],
-    "source": "/mainPlayer/mainPlayer/main.cpp",
-    "server": "../Server/Server/main.cpp",
-    "manager": "../Manager/Manager/main.cpp",
-	"managerName": "manager",
+	"arhitecture": [3],
+	"botsPath": "./bots/",
+	"importFrom": "./import/",
+    "sourcePath": "../mainPlayer/mainPlayer/main.cpp",
+    "serverPath": "../Server/Server/main.cpp",
+    "managerPath": "../Manager/Manager/main.cpp",
+	"sourceName": "bot",
 	"serverName": "server",
+	"managerName": "manager",	
     "rounds": 1,
-    "graphPath": "ala",
+    "graphPath": "graph.txt",
 	"blockedCells": 5,
 	"moves" : 15
 }

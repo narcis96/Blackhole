@@ -48,6 +48,7 @@ class Player:
         self.__neuralNetwork = neuralNetwork
         self.__positions = array('i',[0 for i in range(0, size)])#'i' -> Represents signed integer of size 2 bytes
         self.__values = array('i',[0 for i in range(0, values)])
+        self.__size = size
 
     def SetBlocked(self, index):
         self.__positions[index] = -1
@@ -62,8 +63,10 @@ class Player:
 
     def GetTurn(self):
         outputs = neuralNetwork.predict(self.__positions)
-        print(outputs)
-        return outputs[0].index(max(outputs[0])), outputs[1].index(max(outputs[1]))
+        positions = outputs[:self.__size]
+        values = outputs[self.__size:] 
+#        print(positions)
+        return positions.index(max(positions)), values.index(max(values))
    
 def ParseParameters(arguments):
     if len(arguments) == 1:
@@ -132,6 +135,5 @@ if __name__ == '__main__':
 #        print(ConvertToIndex(cell[0], cell[1]))
     layers, blockedCells, moves = ParseParameters(sys.argv)
     totalCells = 2*moves + blockedCells + 1
-    neuralNetwork = NeuralNetwork(layers)
-    player1 = Player(neuralNetwork, size = totalCells, values = moves)
+    player1 = Player(NeuralNetwork(layers), size = totalCells, values = moves)
     PlayGame(player1, blockedCells, moves)

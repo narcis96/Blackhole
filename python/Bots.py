@@ -2,28 +2,28 @@ import json
 from argparse import Namespace
 class CBot(object):
     def __init__(self, executable, weights, startMoves, step3, step4, stopFinal, toErase):
-        self.__weights = weights
-        self.__startMoves = startMoves
-        self.__step3 = step3
-        self.__step4 = step4
-        self.__stopFinal = stopFinal
-        self.__toErase = toErase
+        self.weights = weights
+        self.startMoves = startMoves
+        self.step3 = step3
+        self.step4 = step4
+        self.stopFinal = stopFinal
+        self.toErase = toErase
         self.executable = executable
 
-    def ToParam(self):
-        return '-weights ' + str(self.__weights) + ' -startMoves ' + str(self.__startMoves) \
-               + ' -step3 ' + str(self.__step3) + ' -step4 ' + str(self.__step4)\
-               + ' -stopFinal ' + str(self.__stopFinal) + ' -erase ' + str(self.__toErase)
     def __str__(self):
         return '-weights ' + str(self.__weights) + ' -startMoves ' + str(self.__startMoves) \
                + ' -step3 ' + str(self.__step3) + ' -step4 ' + str(self.__step4)\
                + ' -stopFinal ' + str(self.__stopFinal) + ' -erase ' + str(self.__toErase)
 
-    def _asdict(self):
-        return self.__dict__
+    @staticmethod
+    def json2obj(data):
+        return json.loads(data, object_hook=lambda d: Namespace(**d))
 
-    def defto_json(self):
-        return self.__dict__
+    @staticmethod
+    def ReadFromJson(path):
+        with open(path) as data_file:
+            param = CBot.json2obj(json.load(data_file))
+        return CBot(param.executable, param.weights, param.startMoves, param.step3, param.step4, param.stopFinal, param.toErase)
 
 class PythonBot():
     def __init__(self, executable, path, blockedCells, moves):
@@ -34,13 +34,13 @@ class PythonBot():
     def __str__(self):
         return self.executable + ' -path ' + self.path +  ' -blockedCells ' + str(self.blockedCells) + ' -moves ' + str(self.moves)
 
-    def toJSON(self):
+    def __ToJson(self):
         return json.dumps(self, default=lambda o: o.__dict__, 
             sort_keys=True, indent=4)
 
-    def WriteToJson(self, path):
+    def WriteJson(self, path):
         with open(path, 'w') as outfile:
-            json.dump(self.toJSON(), outfile)
+            json.dump(self.__ToJson(), outfile)
 
     @staticmethod
     def json2obj(data):
@@ -48,8 +48,6 @@ class PythonBot():
 
     @staticmethod
     def ReadFromJson(path):
-        def json2obj(data):
-            return json.loads(data, object_hook=lambda d: Namespace(**d))
         with open(path) as data_file:
-            param = json2obj(json.load(data_file))
+            param = PythonBot.json2obj(json.load(data_file))
         return PythonBot(param.executable, param.path, param.blockedCells, param.moves)
