@@ -9,25 +9,37 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <sstream>
 #include <cassert>
 #include <atomic>
 #include <mutex>
 #include <thread>
 #include <chrono>
 #include <functional>
-void Battle(const char* cmd, int player1Index, int player2Index,
+void Battle(FILE* pipe, int player1Index, int player2Index,
        std::function<void(int, int, int, int)> callback)
 {
-    FILE* pipe = popen(cmd, "r+");
+    fflush(stderr);
     if (pipe == NULL) {
         fprintf(stderr, "popen() failed");
         exit(EXIT_FAILURE);
     }
-    int player1Score = 0, player2Score = 0;
+    int player1Score = 0, player2Score = 0, score1, score2;
+    
+    std::stringstream ss;
+    ss << std::this_thread::get_id();
+    std::string threadId = ss.str();
+    
     char buff[100];
-    while (fgets(buff, 100, pipe) != NULL) {
-        int score1, score2;
+    for (int match = 1; match <= 2; match++) {
+        if (fgets(buff, 100, pipe) == NULL) {
+            fprintf(stderr, "Manager (%s): fgets() failed at step %d\n", threadId.c_str(), match);
+            fflush(stderr);
+            exit(EXIT_FAILURE);
+        }
         sscanf(buff, "%d %d", &score1, &score2);
+//        fprintf(stderr, "Manager received(%s) : %d %d at match %d\n", threadId.c_str(), score1, score2, match);
+        fflush(stderr);
         player1Score += score1;
         player2Score += score2;
     }
@@ -36,6 +48,7 @@ void Battle(const char* cmd, int player1Index, int player2Index,
         fprintf(stderr, "Error reported by pclose()");
         exit(EXIT_FAILURE);
     }
+    fflush(stderr);
     callback(player1Index, player2Index, player1Score, player2Score);
 }
 std::vector<const char*> GetParam(int argc,const char* argv[], const char* option, bool more = false) {
@@ -43,11 +56,11 @@ std::vector<const char*> GetParam(int argc,const char* argv[], const char* optio
     for (int i = 1; i < argc - 1; i += 2)
         if (strcmp(argv[i], option) == 0)
         {
-            values.push_back(argv[i+1]);
+            values.push_back(argv[i + 1]);
         }
     if (values.empty() == true || (more == false && values.size() > 1)) {
-        fprintf(stdout,"Parameter %s not found ", option);
-        fflush(stdout);
+        fprintf(stderr,"Maneger:Parameter %s not found\n", option);
+        fflush(stderr);
         exit(EXIT_FAILURE);
     }
     return values;
@@ -67,14 +80,14 @@ int main(int argc, const char* argv[])
     std::atomic<int> availableThreads;
     availableThreads = std::thread::hardware_concurrency() - 1; //- main thread
 
-    std::vector<const char*> players = GetParam(argc,argv,"-player", true);
+    std::vector<const char*> players = GetParam(argc, argv,"-player", true);
     const char* server = GetParam(argc,argv,"-server").back();
-    const int rounds = atoi(GetParam(argc,argv, "-rounds").back());
-    const char* graphPath = GetParam(argc,argv,"-graphPath").back();
-    const int blockedCells = atoi(GetParam(argc,argv,"-blockedCells").back());
-    const int moves = atoi(GetParam(argc,argv, "-moves").back());
     const bool debug = atoi(GetParam(argc,argv, "-debug").back());
-    
+    const char* graphPath = GetParam(argc,argv,"-graphPath").back();
+    const int rounds = atoi(GetParam(argc,argv, "-rounds").back());
+    const char* blockedCells = GetParam(argc,argv,"-blockedCells").back();
+    const char* moves = GetParam(argc,argv, "-moves").back();
+    const char* debugServer = GetParam(argc,argv, "-debugServer").back();
     assert(rounds > 0);
     assert(server != NULL);
     assert(players.size() >= 2);
@@ -93,7 +106,7 @@ int main(int argc, const char* argv[])
         for (int i = 0; i < players.size(); i++)
             for (int j = i + 1; j < players.size(); j++) {
                 while (availableThreads.load() == 0) {
-                    std::this_thread::sleep_for(std::chrono::seconds(1));
+                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
                 }
                 availableThreads -= 1;
                 
@@ -101,10 +114,14 @@ int main(int argc, const char* argv[])
                 Add(cmd,"-player1", players[i]);
                 Add(cmd,"-player2", players[j]);
                 Add(cmd,"-graphPath", graphPath);
-                Add(cmd,"-blockedCells", std::to_string(blockedCells));
-                Add(cmd,"-moves", std::to_string(moves));
-                Add(cmd,"-debug", std::to_string(debug));
-                threads.emplace_back(Battle, cmd.c_str(), i, j,
+                Add(cmd,"-blockedCells", blockedCells);
+                Add(cmd,"-moves", moves);
+                Add(cmd,"-debug", debugServer);
+//                fprintf(stderr, "cmd = %s\n", cmd.c_str());
+//                fflush(stderr);
+                FILE* pipe = popen(cmd.c_str(), "r+");
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                threads.emplace_back(Battle, pipe, i, j,
                                      [&myMutex, &scores, &matches, players,
                                       &availableThreads, &debug](int player1Index, int player2Index,
                                                          int player1Score, int player2Score) {
@@ -113,14 +130,14 @@ int main(int argc, const char* argv[])
                                          scores[player1Index] += player1Score;
                                          scores[player2Index] += player2Score;
                                          matches += 1;
-										 if (debug == true) {
+										 //if (debug == true) {
 	                                         fprintf(stderr, "After match:%d\n", matches);
 	                                         for (int i = 0; i < players.size(); i++) {
 	                                             fprintf(stderr, "%d ", scores[i]);
 	                                         }
 	                                         fprintf(stderr, "\n");
 	                                         fflush(stderr);
-										 }
+										 //}
                                          availableThreads += 1;
                                      });
             }

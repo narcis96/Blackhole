@@ -1,7 +1,7 @@
 #thinker python
 import json
 def ConvertToIndex(line, pos)-> int:
-    return int(line*(line+1)/2) + col
+    return int(line*(line+1)/2) + pos
 
 def ConvertToCell(indx) -> str:
     indx = indx + 1
@@ -20,24 +20,31 @@ def ConvertToCell(indx) -> str:
 
 if __name__ == '__main__':
     graph = dict()
-    dx = [ 0, 0, -1, 1, -1, 1 ];
-    dy = [ 1, -1, 0, 0, -1, 1 ];
+    dx = [ 0, 0, -1, 1, -1, 1]
+    dy = [ 1, -1, 0, 0, -1, 1]
     for i in range(8):
         for j in range(i+1):
             for k in range(6):
+                print (i,j, ConvertToIndex(i,j))
                 line = i + dx[k]
                 col = j + dy[k]
                 if 0 <= line and line < 8 and 0 <=col and col <= line:
-                    x = ConvertToIndex(i,j)
-                    y = ConvertToIndex(line,col)
+                    x = ConvertToIndex(i, j)
+                    y = ConvertToIndex(line, col)
 
                     if x not in graph:
                         graph[x] = []
                     if y not in graph:
                         graph[y] = []
+
                     if y not in graph[x]:
                         graph[x].append(y)
                     if x not in graph[y]:
                         graph[y].append(x)
-    for key in graph:   
-        print(graph[key])
+    print(graph)
+
+    file = open('graph.txt', 'w')
+    print(len(graph), file=file)
+    for key in graph:
+        for x in graph[key]:
+            print(key, x , file=file)

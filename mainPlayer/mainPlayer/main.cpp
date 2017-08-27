@@ -20,11 +20,13 @@
 #ifdef __APPLE__
 #include <sys/types.h>
 #include <unistd.h>
-#define CLIENT "Client (" << getpid() << ") : "
+#include <fstream>
 #define LOCAL
-#endif
+#define CLIENT "Client (" << getpid() << ") : "
 //#define MY_DEBUG
 //#define USE_ASSERT
+#endif
+
 enum class CellState
 {
     EMPTY,
@@ -51,10 +53,10 @@ public:
     , m_step4(step4)
     {
 #ifdef USE_ASSERT
-        assert(n > 0 && moves > 0);
+        assert(m_graph.size() > 0 && moves > 0);
 #endif
         m_cellState = std::vector<CellState>(m_graph.size(), CellState::EMPTY);
-        m_cellValue = std::vector<int>(m_graph.size(), 0);
+        m_cellValues = std::vector<int>(m_graph.size(), 0);
         for (int i = 0; i < m_totalMoves; i++)
             m_availableValues.insert(i + 1);
         m_opponentAvailableValues = m_availableValues;
@@ -87,8 +89,7 @@ public:
         std::tuple<int, int> answer(-1, -1);
         if (m_turn <= m_startMoves) {
             auto maxPos = std::max_element(m_freeCells.begin(), m_freeCells.end(),
-                             [&](const int& pos1,
-                                 const int& pos2) -> bool {
+                             [&](const int& pos1, const int& pos2) -> bool {
                                  return GetCost(pos1) < GetCost(pos2);
                              });
             answer = std::tuple<int, int>(*maxPos, *m_availableValues.rbegin());
@@ -150,10 +151,10 @@ private:
         int points = 0;
         for (const auto &x: m_graph[i]) {
             if (m_cellState[x] == CellState::MINE) {
-                points += m_cellValue[x];
+                points += m_cellValues[x];
             } else {
                 if (m_cellState[x] == CellState::OPPONENT) {
-                    points -= m_cellValue[x];
+                    points -= m_cellValues[x];
                 }
             }
         }
@@ -184,10 +185,10 @@ private:
         
         for (const auto &x: m_graph[i]) {
             if (m_cellState[x] == CellState::MINE) {
-                cost -= m_cellValue[x];
+                cost -= m_cellValues[x];
             } else {
                 if (m_cellState[x] == CellState::OPPONENT) {
-                    cost += m_cellValue[x];
+                    cost += m_cellValues[x];
                 } else if (m_cellState[x] == CellState::EMPTY) {
                     long double weight = m_weights[1];
                     int points = GetWin(x);
@@ -205,18 +206,12 @@ private:
     
     std::tuple<double, int, int> GetMinMaxTree(const bool& turn, const unsigned long& stopSize, const bool& stopFinal)
     {
-#ifdef MY_DEBUG
-        if (stopSize <= 2)
-            std::cerr << CLIENT << "GetMinMaxTree() turn = " << turn
-            << " size = " << m_freeCells.size() << " stop = " << stopSize
-            << " stopFinal = " << stopFinal << std::endl
-            << std::flush;
-#endif
         if (stopFinal == true) {
 #ifdef MY_DEBUG
-            std::cerr << CLIENT << "GetMinMaxTree() IsFinal() = " << IsFinal()
-            << std::endl
-            << std::flush;
+//                std::cerr << CLIENT << "GetMinMaxTree() turn = " << turn
+//                << " size = " << m_freeCells.size()
+//                << " IsFinal() = " << IsFinal() << std::endl
+//                << std::flush;
 #endif
             if (IsFinal() == true) {
                 bool currentTurn = turn;
@@ -320,7 +315,7 @@ private:
                 
                 from->insert(value);
                 m_cellState[cell] = CellState::EMPTY;
-                m_cellValue[cell] = 0;
+                m_cellValues[cell] = 0;
                 m_freeCells.insert(cell);
                 
                 if (turn == 1) {
@@ -368,7 +363,7 @@ private:
                  const int& value)
     {
         m_cellState[i] = state;
-        m_cellValue[i] = value;
+        m_cellValues[i] = value;
         EraseCell(i);
     }
     
@@ -416,12 +411,12 @@ private:
     const int m_totalMoves;
     int m_turn;
     std::vector<CellState> m_cellState;
-    std::vector<int> m_cellValue;
+    std::vector<int> m_cellValues;
     std::unordered_set<int> m_freeCells;
     std::set<int> m_availableValues;
     std::set<int> m_opponentAvailableValues;
-    const int dx[6] = { 0, 0, -1, 1, -1, 1 };
-    const int dy[6] = { 1, -1, 0, 0, -1, 1 };
+//    const int dx[6] = { 0, 0, -1, 1, -1, 1 };
+//    const int dy[6] = { 1, -1, 0, 0, -1, 1 };
     
     const long double* const m_weights;
     const unsigned long m_stopFinal;
@@ -430,26 +425,38 @@ private:
     const int m_step3;
     const int m_step4;
 };
-
+#ifdef LOCAL
+std::vector<std::vector<int>>ReadGraph(const char* graphPath) {
+    std::ifstream f(graphPath);
+    int n, x, y;
+    f >> n;
+    std::vector<std::vector<int>>graph(n, std::vector<int>());
+    while(f >> x >> y) {
+        graph[x].push_back(y);
+        graph[y].push_back(x);
+    }
+    f.close();
+    return graph;
+}
+#endif
 int main(int argc, const char* argv[])
 {
     int blockedCells = -1, moves = -1;
     
+    /*for (int i = 0; i < argc ; i++) {
+        std::cerr << CLIENT << argv[i]<< " " << std::endl
+        << std::flush;
+    }*/
     std::vector<long double> weights(3, -1);
     int stopFinal = -1, startMoves = -1, toErase = -1, step3 = -1, step4 = -1;
+    std::vector<std::vector<int>>graph;
     if (argc > 1) {
         bool weightsSetted = false;
         for (int i = 1; i < argc - 1; i++) {
             if (strcmp(argv[i], "-weights") == 0) {
                 weightsSetted = true;
-                sscanf(argv[i + 1], "[%Lf, %Lf, %Lf]", &weights[0], &weights[1],
+                sscanf(argv[i + 1], "%Lf,%Lf,%Lf", &weights[0], &weights[1],
                        &weights[2]);
-            }
-            if (strcmp(argv[i], "-blockedCells") == 0) {
-                blockedCells = atoi(argv[i + 1]);
-            }
-            if (strcmp(argv[i], "-moves") == 0) {
-                moves = atoi(argv[i + 1]);
             }
             if (strcmp(argv[i], "-startMoves") == 0) {
                 startMoves = atoi(argv[i + 1]);
@@ -466,11 +473,23 @@ int main(int argc, const char* argv[])
             if (strcmp(argv[i], "-step4") == 0) {
                 step4 = atoi(argv[i + 1]);
             }
+            
+            if (strcmp(argv[i], "-blockedCells") == 0) {
+                blockedCells = atoi(argv[i + 1]);
+            }
+            if (strcmp(argv[i], "-moves") == 0) {
+                moves = atoi(argv[i + 1]);
+            }
+            if (strcmp(argv[i], "-graphPath") == 0) {
+                graph = ReadGraph(argv[i + 1]);
+            }
         }
         assert(step3 != -1);
         assert(step4 != -1);
         assert(stopFinal != -1);
         assert(startMoves != -1);
+        assert(blockedCells != -1);
+        assert(moves != -1);
         assert(weightsSetted);
     } else {
         blockedCells = 5;
@@ -484,7 +503,11 @@ int main(int argc, const char* argv[])
         startMoves = 4;
         toErase = -1;
     }
-    std::vector<std::vector<int>>graph;
+#ifdef MY_DEBUG
+    std::cerr << CLIENT << "weights= " << weights[0]<< " " << weights[1] <<" " << weights[2]<< std::endl
+    << std::flush;
+#endif
+    
     BlackholeSolver solver(graph, moves, weights.data(), stopFinal,
                            startMoves, step3, step4, toErase);
     
@@ -550,11 +573,12 @@ int main(int argc, const char* argv[])
         std::cin >> line >> pos;
         int indx = ConvertToIndex(line, pos);
 #endif
+        
+#ifdef MY_DEBUG
+        std::cerr << CLIENT << indx << std::endl << std::flush;
+#endif
         solver.MarkBlocked(indx);
 
-#ifdef MY_DEBUG
-        std::cerr << CLIENT << line << pos << std::endl << std::flush;
-#endif
     }
     std::string command;
     std::cin >> command;

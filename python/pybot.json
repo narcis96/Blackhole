@@ -1,1 +1,1 @@
-"{\n    \"blockedCells\": 5,\n    \"executable\": \"python main.py\",\n    \"moves\": 15,\n    \"path\": \"ala\"\n}"
+"{\n    \"blockedCells\": 5,\n    \"executable\": \"python3 main.py\",\n    \"moves\": 15,\n    \"path\": \"ala\"\n}"

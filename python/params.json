@@ -1,9 +1,9 @@
 {
-    "population": 4,
+    "population": 2,
     "mutation": 0.01,
 	"arhitecture": [3],
-	"botsPath": "./bots/",
-	"importFrom": "./import/",
+	"botsPath": "./bots",
+	"importFrom": "./import",
     "sourcePath": "../mainPlayer/mainPlayer/main.cpp",
     "serverPath": "../Server/Server/main.cpp",
     "managerPath": "../Manager/Manager/main.cpp",
@@ -13,5 +13,7 @@
     "rounds": 1,
     "graphPath": "graph.txt",
 	"blockedCells": 5,
-	"moves" : 15
+	"moves" : 15,
+	"debug": 1,
+	"debugServer": 1
 }

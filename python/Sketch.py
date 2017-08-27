@@ -3,38 +3,26 @@ from Population import  Population
 import statistics as stats
 from script import Compile
 from Bots import CBot, PythonBot
-from test import Object
-from collections import namedtuple
-from argparse import Namespace
 from DNA import DNA
 class Sketch(object):
-    def __init__(self, graphPath):
-        self.__graphPath = graphPath
-
-    def setup(self, params):
-        self.__population = Population(population, params['mutation'])
-        self.__managerName = params['managerName']
-        self.__serverName = params['serverName']
-        self.__rounds = params['rounds']
-        self.__blockedCells = params['blockedCells']
-        self.__moves = params['blockedCells']
-        self.__extraBots = params['extraBots']
+    def __init__(self, population, mutation):
+        self.__population = Population(population, mutation)
 
     def __Print(self, generation, scores):
         os.makedirs(str(generation), exist_ok = True)
 
-        for i, score in scores:
-            print(score, file = './' + str(generation) + '/'+ str(i) + '.txt')
+        for i, score in enumerate(scores):
+            print(score, file = open('./' + str(generation) + '/'+ str(i) + '.txt', 'w'))
 
-        for i, dna in self.__population.population:
-            dna.WriteJson(file = './' + str(generation) + '/' + str(i) + '.json')
+        for i, dna in enumerate(self.__population.GetDNAs()):
+            dna.WriteJson(path = './' + str(generation) + '/' + str(i) + '.json')
 
         print('generation:', str(generation), 'average score:', stats.mean(scores))
 
-    def run(self):
+    def run(self, params):
         generation = 1
         while True:
-            scores = self.__population.CalcFitness(self.__managerName, self.__serverName, self.__extraBots, self__blockedCells, self.__moves,self.__rounds)
+            scores = self.__population.CalcFitness(params)
             self.__Print(generation, scores)
             self.__population.NaturalSelection()
             self.__population.Generate()
@@ -44,19 +32,17 @@ class Sketch(object):
 def GetPopulation(params):
     population = []
     if 'population' in params:
-        count = dictParam['population']
-        total = 2*dictParam['moves'] + dictParam['blockedCells'] + 1
-        arhitecture =  params['arhitecture'];
+        count = params['population']
+        total = 2*params['moves'] + params['blockedCells'] + 1
+        arhitecture =  params['arhitecture']
         arhitecture = [total]  + arhitecture
-        arhitecture.append(total + moves)
-        for i in range (count):
-            population.append(DNA.Random())
-
+        arhitecture.append(total + params['moves'])
+        population = [DNA.Random(arhitecture) for i in range (count)]
     else:
-        files = os.listdir(dictParam['importFrom'])
+        files = os.listdir(params['importFrom'])
         for file in files:
            if file.endswith(".json"):
-               with open(path + file) as jsonfile:
+               with open(path + '/' + file) as jsonfile:
                    population.append(DNA.ReadFromJson(jsonfile))
     return population
 def GetBots(path):
@@ -64,15 +50,15 @@ def GetBots(path):
     files = os.listdir()
     for file in files:
         if file.endswith(".json"):
-            with open(path + file) as jsonfile:
+            with open(path + '/' + file) as jsonfile:
                  bots.append(CBot.ReadFromJson(jsonfile))
     return bots
 if __name__ == '__main__':
-    path = sys.argv[sys.argv.index('-path') + 1]
+    path = sys.argv[sys.argv.index('-params') + 1]
     with open(path) as paramFile:
         dictParam = json.load(paramFile)
 
-    bot1 = PythonBot ('python main.py', 'ala', 5, 15)
+    bot1 = PythonBot ('python3 main.py', 'ala', 5, 15)
     bot1.WriteJson('pybot.json')
 
     bot2 = PythonBot.ReadFromJson('pybot.json')
@@ -82,14 +68,15 @@ if __name__ == '__main__':
     print(dictParam)
 
 
- #   dictParam = dict()
+#    dictParam = dict()
  #   dictParam['path'] = ''
- #   dictParam['blockedCells'] = 5
- #   dictParam['moves'] = 15;
- #   with open('bot.json', 'w') as outfile:
- #       json.dump(pybot._asdict(), outfile)
- #   with open('bot.json') as data_file:
- #       pybot2Param = json.load(data_file)
+  #  dictParam['blockedCells'] = 5
+   # dictParam['moves'] = 15;
+    #with open('bot.json', 'w') as outfile:
+     #   json.dump(pybot._asdict(), outfile)
+    #with open('bot.json') as data_file:
+     #   pybot2Param = json.load(data_file)
+
  #   pybot2 = PythonBot(pybot2Param['executable'], pybot2Param['path'], pybot2Param['blockedCells'], pybot2Param['moves'])
  #   print(pybot2Param)
  #   exit(0)
@@ -103,8 +90,7 @@ if __name__ == '__main__':
     if Compile(dictParam['sourcePath'], dictParam['sourceName']) != 0 or Compile(dictParam['serverPath'], dictParam['serverName']) != 0 or Compile(dictParam['managerPath'], dictParam['managerName']) != 0:
        sys.exit(-1)
     print ('Compile successful')
-    dictParam['extraBots'] = GetBots(dictParam['botsPath'])
+    dictParam['extraBots'] = []#GetBots(dictParam['botsPath'])
     population = GetPopulation(dictParam)
-    runner = Sketch(population)
-    runner.setup(params)
-    runner.run()
+    runner = Sketch(population, dictParam['mutation'])
+    runner.run(dictParam)

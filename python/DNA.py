@@ -13,7 +13,8 @@ class DNA(object):
         for i in range(1, len(arhitecture)):
             hiddenLayer = list()
             for j in range(arhitecture[i]):
-                    neuron = [{'weights':[random()*100 for w in range(arhitecture[i - 1] + 1)]}] #+1 for bias
+                    neuron = dict()
+                    neuron['weights'] = [random()*100 for w in range(arhitecture[i - 1] + 1)] #+1 for bias
                     hiddenLayer.append(neuron)
             network.append(hiddenLayer)
         return cls(arhitecture, network)
@@ -45,7 +46,7 @@ class DNA(object):
 
     def WriteNetworkJson(self, path):
         with open(path, 'w') as outfile:
-            json.dump(str(self.network), outfile)
+            json.dump(self.network, outfile)
 
     @staticmethod
     def json2obj(data):

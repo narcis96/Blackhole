@@ -11,9 +11,11 @@ class CBot(object):
         self.executable = executable
 
     def __str__(self):
-        return '-weights ' + str(self.__weights) + ' -startMoves ' + str(self.__startMoves) \
-               + ' -step3 ' + str(self.__step3) + ' -step4 ' + str(self.__step4)\
-               + ' -stopFinal ' + str(self.__stopFinal) + ' -erase ' + str(self.__toErase)
+        return self.executable + ' -weights ' + str(self.weights[0])\
+               + ',' + str(self.weights[1]) + ',' + str(self.weights[2])\
+               + ' -startMoves ' + str(self.startMoves) \
+               + ' -step3 ' + str(self.step3) + ' -step4 ' + str(self.step4)\
+               + ' -stopFinal ' + str(self.stopFinal) + ' -erase ' + str(self.toErase)
 
     @staticmethod
     def json2obj(data):

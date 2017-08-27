@@ -9,27 +9,29 @@ class Population(object):
         self.__count = len(population)
         self.__mutationRate = mutationRate
         self.__population = population
-        self.__scores = [0 for i in range(count)]
+        self.__scores = [0 for i in range(self.__count)]
 
         os.makedirs('temp', exist_ok = True)
-        self.__names = ['./temp/' + str(i) + '.json' for i in range (count)]
+        self.__names = ['./temp/' + str(i) + '.json' for i in range (self.__count)]
 
+    def GetDNAs(self):
+        return  self.__population
 
-    def CalcFitness(self, managerName, serverName, extraBots, blockedCells, moves, rounds):
+    def CalcFitness(self, params):
         bots = []
-        for i, dna in self.__population:
+        for i,dna in enumerate(self.__population):
             dna.WriteNetworkJson(self.__names[i])
-            bots.append(PythonBot('python main.py', self.__names[i], blockedCells, moves))
-        bots.extend(extraBots)
-        scores = Battle(managerName, serverName, rounds, bots, debug = True)
-
+            bots.append(PythonBot('python3 main.py', self.__names[i], params['blockedCells'], params['moves']))
+        bots.extend(params['extraBots'])
+        params['players'] = bots
+        scores = Battle(params)
         self.__scores = scores[0:self.__count]
         return self.__scores
 
     def NaturalSelection(self):
         maxScore = max(self.__scores)
         self.__matingPool = []
-        for i, dna in self.__population:
+        for i, dna in enumerate(self.__population):
             score = self.__scores[i]/maxScore
             n = floor(score) * 10
             for j in range(n):
