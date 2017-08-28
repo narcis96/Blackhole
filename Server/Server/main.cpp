@@ -174,7 +174,7 @@ int main(int argc, const char* argv[])
             sscanf(buff, "%d=%d", &indx, &val);
             
             if (debug == true) {
-                fprintf(stderr, "Server(%d) : received %s\n", getpid(), buff);
+                fprintf(stderr, "Server(%d) : received %s", getpid(), buff);
                 fflush(stderr);
             }
 

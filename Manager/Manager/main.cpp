@@ -13,6 +13,7 @@
 #include <cassert>
 #include <atomic>
 #include <mutex>
+#include <algorithm>
 #include <thread>
 #include <chrono>
 #include <functional>
@@ -130,14 +131,14 @@ int main(int argc, const char* argv[])
                                          scores[player1Index] += player1Score;
                                          scores[player2Index] += player2Score;
                                          matches += 1;
-										 //if (debug == true) {
+					                    if (debug == true) {
 	                                         fprintf(stderr, "After match:%d\n", matches);
 	                                         for (int i = 0; i < players.size(); i++) {
 	                                             fprintf(stderr, "%d ", scores[i]);
 	                                         }
 	                                         fprintf(stderr, "\n");
 	                                         fflush(stderr);
-										 //}
+										 }
                                          availableThreads += 1;
                                      });
             }
@@ -147,7 +148,7 @@ int main(int argc, const char* argv[])
     }
     threads.clear();
     for (int i = 0; i < players.size(); i++) {
-        fprintf(stdout, "%d\n", scores[i]);
+        fprintf(stdout, "%d\n", std::max(scores[i],0));
     }
     fflush(stdout);
     return EXIT_SUCCESS;

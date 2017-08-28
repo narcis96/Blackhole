@@ -40,11 +40,11 @@ class Population(object):
     def Generate(self):
         self.__population = []
         for i in range(self.__count):
-            index1 = random() * len(self.__matingPool)
-            index2 = random() * len(self.__matingPool)
+            index1 = floor(random() * len(self.__matingPool))
+            index2 = floor(random() * len(self.__matingPool))
             parent1 = self.__matingPool[index1]
             parent2 = self.__matingPool[index2]
-            child = parent1.CrossOver(parent2)
+            child = parent1.CrossOver(parent2, 0.5)
             child.Mutate(self.__mutationRate)
             self.__population.append(child)
 

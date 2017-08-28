@@ -20,6 +20,8 @@ class NeuralNetwork:
 
     # tansig function
     def __transfer(self, activation):
+#        sys.stderr.write(str(activation) + '\n')
+#        sys.stderr.flush()
         return 2.0 / (1.0 + exp(-2.0*activation)) - 1
 
     def __forward_propagate(self, row):
@@ -47,7 +49,7 @@ class Player:
     def __init__(self, neuralNetwork, size, values):
         self.__neuralNetwork = neuralNetwork
         self.__positions = array('i',[0 for i in range(size)])#'i' -> Represents signed integer of size 2 bytes
-        self.__values = array('i',[0 for i in range(values)])
+        #self.__values = array('i',[0 for i in range(values)])
         self.__size = size
         self.__blocked = []
         self.__used = []
@@ -57,18 +59,18 @@ class Player:
         self.__blocked.append(index)
 
     def SetOpponet(self, index, value):
-        self.__positions[index] = -2
-        self.__values[value-1] = -1
+        self.__positions[index] = -(value+1)
+#        self.__values[value-1] = -1
         self.__blocked.append(index)
 
     def SetMine(self, index, value):
-        self.__positions[index] = 1
-        self.__values[value-1] = 1
+        self.__positions[index] = value + 1
+#        self.__values[value-1] = 1
         self.__blocked.append(index)
         self.__used.append(value - 1)
 
     def GetTurn(self):
-        outputs = self.__neuralNetwork.predict(self.__positions.extend(self.__values))
+        outputs = self.__neuralNetwork.predict(self.__positions)
         positions = outputs[:self.__size]
         values = outputs[self.__size:]
         for position in self.__blocked:
@@ -127,11 +129,10 @@ def PlayGame(player1, blockedCells, moves):
         turn = 1
     else:
         turn = 0
-    sys.stderr.write(str(turn) + '\n')
-    sys.stderr.flush()
     for i in range(2*moves):
         if turn == 1:
             pos, val = player1.GetTurn()
+            player1.SetMine(pos,val)
             #pos = ConvertToCell(indx = pos)
             sys.stdout.write(str(pos) + '=' + str(val) + '\n')
             sys.stdout.flush()

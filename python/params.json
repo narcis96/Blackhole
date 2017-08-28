@@ -1,5 +1,5 @@
 {
-    "population": 2,
+    "population": 10,
     "mutation": 0.01,
 	"arhitecture": [3],
 	"botsPath": "./bots",
@@ -10,10 +10,10 @@
 	"sourceName": "bot",
 	"serverName": "server",
 	"managerName": "manager",	
-    "rounds": 1,
+    "rounds": 3,
     "graphPath": "graph.txt",
 	"blockedCells": 5,
 	"moves" : 15,
-	"debug": 1,
-	"debugServer": 1
+	"debug": 0,
+	"debugServer": 0
 }

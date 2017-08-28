@@ -14,27 +14,26 @@ class DNA(object):
             hiddenLayer = list()
             for j in range(arhitecture[i]):
                     neuron = dict()
-                    neuron['weights'] = [random()*100 for w in range(arhitecture[i - 1] + 1)] #+1 for bias
+                    neuron['weights'] = [random()*5 for w in range(arhitecture[i - 1] + 1)] #+1 for bias
                     hiddenLayer.append(neuron)
             network.append(hiddenLayer)
         return cls(arhitecture, network)
 
     def CrossOver(self, other, fromFirst):
-        arhitecture = self.arhitecture
         network = self.network
-        for i,layer in child.__network:
-            for j,neuron in layer:
-                if (random(1) <= fromFirst):
+        for i,layer in enumerate(network):
+            for j,neuron in enumerate(layer):
+                if (random() <= fromFirst):
                     network[i][j] = self.network[i][j]
                 else:
                     network[i][j] = other.network[i][j]
-        return DNA(arhitecture,network)
+        return DNA(self.arhitecture,network)
 
     def Mutate(self, mutationRate):
-        for i,layer in self.__network:
-            for j,neuron in layer:
+        for i,layer in enumerate(self.network):
+            for j,neuron in enumerate(layer):
                 if (random() < mutationRate):
-                    self.network[i][j]['weights'] = [random()*100 for k in range(len(neuron['weights']))]
+                    self.network[i][j]['weights'] = [random()*5 for k in range(len(neuron['weights']))]
 
     def __ToJson(self):
         return json.dumps(self, default=lambda o: o.__dict__, 

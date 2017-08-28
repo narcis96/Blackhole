@@ -9,15 +9,14 @@ class Sketch(object):
         self.__population = Population(population, mutation)
 
     def __Print(self, generation, scores):
-        os.makedirs(str(generation), exist_ok = True)
-
-        for i, score in enumerate(scores):
-            print(score, file = open('./' + str(generation) + '/'+ str(i) + '.txt', 'w'))
-
+        saveFolder = './save/' + str(generation)
+        os.makedirs(saveFolder, exist_ok = True)
+        print(scores, file = open(saveFolder + '/scores.txt', 'w'))
         for i, dna in enumerate(self.__population.GetDNAs()):
-            dna.WriteJson(path = './' + str(generation) + '/' + str(i) + '.json')
-
-        print('generation:', str(generation), 'average score:', stats.mean(scores))
+            dna.WriteJson(path = saveFolder + '/' + str(i) + '.json')
+        average = stats.mean(scores)
+        print(average, file = open(saveFolder + '/average.txt', 'w'))
+        print('generation:', str(generation), 'average score:', average)
 
     def run(self, params):
         generation = 1
