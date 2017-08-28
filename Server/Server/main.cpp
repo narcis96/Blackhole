@@ -82,7 +82,7 @@ int main(int argc, const char* argv[])
     return EXIT_FAILURE;
 #endif
     if (argc < 1+2*6) {
-        fprintf(stderr, "Server(%d):Not enough parameters", getpid());
+        fprintf(stderr, "Server(%d):Not enough parameters\n", getpid());
         fflush(stderr);
         return EXIT_FAILURE;
     }

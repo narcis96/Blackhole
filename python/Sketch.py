@@ -11,7 +11,11 @@ class Sketch(object):
     def __Print(self, generation, scores):
         saveFolder = './save/' + str(generation)
         os.makedirs(saveFolder, exist_ok = True)
-        print(scores, file = open(saveFolder + '/scores.txt', 'w'))
+        scoresFile = open(saveFolder + '/scores.txt', 'w')
+        indx = [i for i in range(len(scores))]
+        indx.sort(key=lambda x: scores[x])
+        for i in indx:
+            print(i, scores[i], file = scoresFile)
         for i, dna in enumerate(self.__population.GetDNAs()):
             dna.WriteJson(path = saveFolder + '/' + str(i) + '.json')
         average = stats.mean(scores)
@@ -41,8 +45,7 @@ def GetPopulation(params):
         files = os.listdir(params['importFrom'])
         for file in files:
            if file.endswith(".json"):
-               with open(path + '/' + file) as jsonfile:
-                   population.append(DNA.ReadFromJson(jsonfile))
+               population.append(DNA.ReadFromJson(file))
     return population
 def GetBots(path):
     bots = []

@@ -20,18 +20,13 @@ class NeuralNetwork:
 
     # tansig function
     def __transfer(self, activation):
-#        sys.stderr.write(str(activation) + '\n')
-#        sys.stderr.flush()
         return 2.0 / (1.0 + exp(-2.0*activation)) - 1
 
     def __forward_propagate(self, row):
         inputs = row
         for layer in self.__network:
             new_inputs = []
-            for neuron in layer:
-                activation = self.__activate(neuron['weights'], inputs)
-                neuron['output'] = self.__transfer(activation)
-                new_inputs.append(neuron['output'])
+            new_inputs = [self.__transfer(self.__activate(neuron, inputs)) for neuron in layer]
             inputs = new_inputs
         return inputs
 

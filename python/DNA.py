@@ -1,4 +1,5 @@
 from random import random
+from argparse import Namespace
 import json
 class DNA(object):
 
@@ -11,11 +12,7 @@ class DNA(object):
     def Random(cls, arhitecture):
         network = []
         for i in range(1, len(arhitecture)):
-            hiddenLayer = list()
-            for j in range(arhitecture[i]):
-                    neuron = dict()
-                    neuron['weights'] = [random()*5 for w in range(arhitecture[i - 1] + 1)] #+1 for bias
-                    hiddenLayer.append(neuron)
+            hiddenLayer = [[random()*5] * (arhitecture[i - 1] + 1)] *arhitecture[i]
             network.append(hiddenLayer)
         return cls(arhitecture, network)
 
@@ -33,7 +30,7 @@ class DNA(object):
         for i,layer in enumerate(self.network):
             for j,neuron in enumerate(layer):
                 if (random() < mutationRate):
-                    self.network[i][j]['weights'] = [random()*5 for k in range(len(neuron['weights']))]
+                    self.network[i][j] = [random()*5] * len(neuron)
 
     def __ToJson(self):
         return json.dumps(self, default=lambda o: o.__dict__, 
@@ -55,4 +52,5 @@ class DNA(object):
     def ReadFromJson(path):
         with open(path) as data_file:
             param = DNA.json2obj(json.load(data_file))
-        return DNA(param.arhitecture, param.network)
+        network = [[neuron for neuron in layer]for layer in param.network]
+        return DNA(param.arhitecture, network)

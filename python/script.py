@@ -1,6 +1,7 @@
 import sys, os, subprocess, platform
 from Bots import PythonBot, CBot
 import json
+from DNA import  *
 def Compile(path, to):
     command = 'clang -Wall -o'+ to + ' ' + path + ' -O3 -std=c++11 -lstdc++'
     return os.system(command)
@@ -32,15 +33,15 @@ def Battle(params):
     return  scores
 
 if __name__ == '__main__':
-    if len(sys.argv) < (1 + 2*4):
+    if len(sys.argv) < 1:
         print('Not enough parameters')
         sys.exit(-1)
     #path = sys.argv[sys.argv.index('-path') + 1]
     with open('params.json') as data_file:
         params = json.load(data_file)
-    sourceName = 'botc++'
-    serverName = 'server'
-    managerName = 'manager'
+    sourceName = params['sourceName']
+    serverName = params['serverName']
+    managerName = params['managerName']
     sourcePath = params['sourcePath']
     serverPath = params['serverPath']
     managerPath = params['managerPath']
@@ -49,9 +50,19 @@ if __name__ == '__main__':
        sys.exit(-1)
     print ('Compile successful')
 
-    bot1 = CBot(weights=[0.7, 0.85, 1],executable = './' + sourceName, startMoves=4, step3=16, step4=14, stopFinal=9, toErase = 20)
-    bot2 = CBot(weights=[0.7, 0.85, 1],executable = './' + sourceName, startMoves=4, step3=14, step4=13, stopFinal=9, toErase = 20)
-    bot3 = CBot(weights=[0.7, 0.85, 1],executable = './' + sourceName, startMoves=4, step3=13, step4=12, stopFinal=9, toErase = 20)
+    bot1 = CBot(weights=[0.7, 0.85, 1],executable = sourceName, startMoves=4, step3=16, step4=14, stopFinal=9, toErase = 20)
+    bot2 = CBot(weights=[0.7, 0.85, 1],executable = sourceName, startMoves=4, step3=14, step4=13, stopFinal=9, toErase = 20)
+    bot3 = CBot(weights=[0.7, 0.85, 1],executable = sourceName, startMoves=4, step3=13, step4=12, stopFinal=9, toErase = 20)
+    dna = DNA.ReadFromJson('./bots/9.json')
+    print(dna.arhitecture)
+    print(dna.network)
+
+    #dna.WriteNetworkJson('./script/pybot.json')
+    pyBot = PythonBot('python3 main.py', './script/pybot.json', params['blockedCells'], params['moves'])
+
+    bot1.WriteJson('./import/bot1.json')
+    bot2.WriteJson('./import/bot2.json')
+
     '''
     cmd = []
     cmd.append('./' + serverName)
@@ -75,8 +86,7 @@ if __name__ == '__main__':
     '''
     bots = []
     bots.append(bot1)
-    bots.append(bot2)
-    bots.append(bot3)
+    bots.append(pyBot)
     params['players'] = bots
     scores = Battle(params)
     print (scores)

@@ -7,13 +7,13 @@
     "sourcePath": "../mainPlayer/mainPlayer/main.cpp",
     "serverPath": "../Server/Server/main.cpp",
     "managerPath": "../Manager/Manager/main.cpp",
-	"sourceName": "bot",
-	"serverName": "server",
-	"managerName": "manager",	
+	"sourceName": "./executables/bot",
+	"serverName": "./executables/server",
+	"managerName": "./executables/manager",	
     "rounds": 3,
     "graphPath": "graph.txt",
 	"blockedCells": 5,
 	"moves" : 15,
-	"debug": 0,
+	"debug": 1,
 	"debugServer": 0
 }

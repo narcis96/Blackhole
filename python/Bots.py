@@ -17,6 +17,14 @@ class CBot(object):
                + ' -step3 ' + str(self.step3) + ' -step4 ' + str(self.step4)\
                + ' -stopFinal ' + str(self.stopFinal) + ' -erase ' + str(self.toErase)
 
+    def __ToJson(self):
+        return json.dumps(self, default=lambda o: o.__dict__,
+            sort_keys=True, indent=4)
+
+    def WriteJson(self, path):
+        with open(path, 'w') as outfile:
+            json.dump(self.__ToJson(), outfile)
+
     @staticmethod
     def json2obj(data):
         return json.loads(data, object_hook=lambda d: Namespace(**d))
