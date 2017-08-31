@@ -41,7 +41,7 @@ public:
     BlackholeSolver(const std::vector<std::vector<int>>&graph, const int& moves,
                     const long double* weights, const unsigned long& stopFinal,
                     const int& startMoves, const int& step3, const int& step4,
-                    const int& toErase)
+                    const int& toErase, const long double* probabilities)
     : m_graph(graph)
     , m_totalMoves(moves)
     , m_turn(0)
@@ -51,6 +51,7 @@ public:
     , m_erase(toErase)
     , m_step3(step3)
     , m_step4(step4)
+	, m_probabilities(probabilities)
     {
 #ifdef USE_ASSERT
         assert(m_graph.size() > 0 && moves > 0);
@@ -303,7 +304,7 @@ private:
                 else
                     availableValues = m_opponentAvailableValues;
             }
-            
+			std::vector < double >sons;
             for (const auto& value : availableValues) {
                 if (turn == 1) {
                     MarkMine(cell, value);
@@ -318,14 +319,30 @@ private:
                 m_cellValues[cell] = 0;
                 m_freeCells.insert(cell);
                 
-                if (turn == 1) {
-                    if (std::get<0>(answer) < std::get<0>(sonBest)) {
-                        answer = std::make_tuple(std::get<0>(sonBest), cell, value);
-                    }
-                } else if (std::get<0>(answer) > std::get<0>(sonBest)) {
-                    answer = std::make_tuple(std::get<0>(sonBest), -1, -1);
-                }
+				if (turn == 1) {
+					if (std::get<0>(answer) < std::get<0>(sonBest)) {
+						answer = std::make_tuple(std::get<0>(sonBest), cell, value);
+					}
+				}
+				else {
+					sons.push_back(std::get<0>(sonBest));
+				}
             }
+
+
+			if (turn == 0) {
+				std::sort(sons.begin(), sons.end());
+				int dim = sizeof(m_probabilities) / sizeof(*m_probabilities);
+				for (int i = 0; i < sons.size() && i < dim; ++i)
+				{
+					if (rand() % 100 <= m_probabilities[i]) {
+						answer = std::make_tuple(sons[i], -1, -1);
+					}
+				}
+				if (std::get<0>(answer) > std::get<0>(sonBest)) {
+					answer = std::make_tuple(std::get<0>(sonBest), -1, -1);
+				}
+			}
         }
         return answer;
     }
@@ -419,26 +436,218 @@ private:
 //    const int dy[6] = { 1, -1, 0, 0, -1, 1 };
     
     const long double* const m_weights;
+	const long double* const m_probabilities;
     const unsigned long m_stopFinal;
     const int m_startMoves;
     const int m_erase;
     const int m_step3;
     const int m_step4;
 };
+const char *graph = 
+"36\n\
+0 1\n\
+0 2\n\
+1 0\n\
+1 2\n\
+1 3\n\
+1 4\n\
+2 0\n\
+2 1\n\
+2 4\n\
+2 5\n\
+3 1\n\
+3 4\n\
+3 6\n\
+3 7\n\
+4 1\n\
+4 2\n\
+4 3\n\
+4 5\n\
+4 7\n\
+4 8\n\
+5 2\n\
+5 4\n\
+5 8\n\
+5 9\n\
+6 3\n\
+6 7\n\
+6 10\n\
+6 11\n\
+7 3\n\
+7 4\n\
+7 6\n\
+7 8\n\
+7 11\n\
+7 12\n\
+8 4\n\
+8 5\n\
+8 7\n\
+8 9\n\
+8 12\n\
+8 13\n\
+9 5\n\
+9 8\n\
+9 13\n\
+9 14\n\
+10 6\n\
+10 11\n\
+10 15\n\
+10 16\n\
+11 6\n\
+11 7\n\
+11 10\n\
+11 12\n\
+11 16\n\
+11 17\n\
+12 7\n\
+12 8\n\
+12 11\n\
+12 13\n\
+12 17\n\
+12 18\n\
+13 8\n\
+13 9\n\
+13 12\n\
+13 14\n\
+13 18\n\
+13 19\n\
+14 9\n\
+14 13\n\
+14 19\n\
+14 20\n\
+15 10\n\
+15 16\n\
+15 21\n\
+15 22\n\
+16 10\n\
+16 11\n\
+16 15\n\
+16 17\n\
+16 22\n\
+16 23\n\
+17 11\n\
+17 12\n\
+17 16\n\
+17 18\n\
+17 23\n\
+17 24\n\
+18 12\n\
+18 13\n\
+18 17\n\
+18 19\n\
+18 24\n\
+18 25\n\
+19 13\n\
+19 14\n\
+19 18\n\
+19 20\n\
+19 25\n\
+19 26\n\
+20 14\n\
+20 19\n\
+20 26\n\
+20 27\n\
+21 15\n\
+21 22\n\
+21 28\n\
+21 29\n\
+22 15\n\
+22 16\n\
+22 21\n\
+22 23\n\
+22 29\n\
+22 30\n\
+23 16\n\
+23 17\n\
+23 22\n\
+23 24\n\
+23 30\n\
+23 31\n\
+24 17\n\
+24 18\n\
+24 23\n\
+24 25\n\
+24 31\n\
+24 32\n\
+25 18\n\
+25 19\n\
+25 24\n\
+25 26\n\
+25 32\n\
+25 33\n\
+26 19\n\
+26 20\n\
+26 25\n\
+26 27\n\
+26 33\n\
+26 34\n\
+27 20\n\
+27 26\n\
+27 34\n\
+27 35\n\
+28 21\n\
+28 29\n\
+29 21\n\
+29 22\n\
+29 28\n\
+29 30\n\
+30 22\n\
+30 23\n\
+30 29\n\
+30 31\n\
+31 23\n\
+31 24\n\
+31 30\n\
+31 32\n\
+32 24\n\
+32 25\n\
+32 31\n\
+32 33\n\
+33 25\n\
+33 26\n\
+33 32\n\
+33 34\n\
+34 26\n\
+34 27\n\
+34 33\n\
+34 35\n\
+35 27\n\
+35 34\n";
 #ifdef LOCAL
-std::vector<std::vector<int>>ReadGraph(const char* graphPath) {
+std::string GetGraph(const char* graphPath)
+{
+	FILE * file = fopen("graphPath", "r");
+	fseek(file, 0, SEEK_END);
+	long lSize = ftell(file);
+	rewind(file);
+
+	char *graph;
+	graph = (char*)malloc(sizeof(char)*(lSize + 1));
+	memset(graph, 0, sizeof(char)*(lSize + 1));
+	fread(graph, sizeof(char), lSize, file);
+
+	return std::string(graph)
+}
+#else
+std::string GetGraph()
+{
+	return std::string(graph);
+}
+#endif
+
+std::vector<std::vector<int>>ReadGraph(const char* graph) {
     std::ifstream f(graphPath);
     int n, x, y;
-    f >> n;
+	sscanf(graph, "%d\n", &n);
     std::vector<std::vector<int>>graph(n, std::vector<int>());
-    while(f >> x >> y) {
+    while(sscanf(graph, "%d %d\n", &x, &y)) {
         graph[x].push_back(y);
         graph[y].push_back(x);
     }
     f.close();
     return graph;
 }
-#endif
+
 int main(int argc, const char* argv[])
 {
     int blockedCells = -1, moves = -1;
@@ -448,10 +657,14 @@ int main(int argc, const char* argv[])
         << std::flush;
     }*/
     std::vector<long double> weights(3, -1);
+	std::vector<long double> probabilities(3, -1);
+	
     int stopFinal = -1, startMoves = -1, toErase = -1, step3 = -1, step4 = -1;
     std::vector<std::vector<int>>graph;
+	std::string graphStr;
     if (argc > 1) {
         bool weightsSetted = false;
+		bool probabilitiesSetted = false;
         for (int i = 1; i < argc - 1; i++) {
             if (strcmp(argv[i], "-weights") == 0) {
                 weightsSetted = true;
@@ -473,7 +686,6 @@ int main(int argc, const char* argv[])
             if (strcmp(argv[i], "-step4") == 0) {
                 step4 = atoi(argv[i + 1]);
             }
-            
             if (strcmp(argv[i], "-blockedCells") == 0) {
                 blockedCells = atoi(argv[i + 1]);
             }
@@ -481,8 +693,13 @@ int main(int argc, const char* argv[])
                 moves = atoi(argv[i + 1]);
             }
             if (strcmp(argv[i], "-graphPath") == 0) {
-                graph = ReadGraph(argv[i + 1]);
+                graphStr = GetGraph(argv[i + 1]);
             }
+			if (strcmp(argv[i], "-probabilities") == 0) {
+				probabilitiesSetted = true;
+				sscanf(argv[i + 1], argv[i + 2], &probabilities[0], &probabilities[1],
+					&probabilities[2]);
+			}
         }
         assert(step3 != -1);
         assert(step4 != -1);
@@ -491,6 +708,7 @@ int main(int argc, const char* argv[])
         assert(blockedCells != -1);
         assert(moves != -1);
         assert(weightsSetted);
+		assert(probabilitiesSetted);
     } else {
         blockedCells = 5;
         moves = 15;
@@ -502,7 +720,9 @@ int main(int argc, const char* argv[])
         stopFinal = 9;
         startMoves = 4;
         toErase = -1;
+		graphStr = GetGraph();
     }
+	graph = ReadGraph(graphStr);
 #ifdef MY_DEBUG
     std::cerr << CLIENT << "weights= " << weights[0]<< " " << weights[1] <<" " << weights[2]<< std::endl
     << std::flush;
