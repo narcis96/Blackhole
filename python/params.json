@@ -10,10 +10,10 @@
 	"sourceName": "./executables/bot",
 	"serverName": "./executables/server",
 	"managerName": "./executables/manager",	
-    "rounds": 3,
+    "rounds": 4,
     "graphPath": "graph.txt",
 	"blockedCells": 5,
 	"moves" : 15,
 	"debug": 1,
-	"debugServer": 0
+	"debugServer": 1
 }

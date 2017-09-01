@@ -19,10 +19,8 @@ class DNA(object):
     def CrossOver(self, other, fromFirst):
         network = self.network
         for i,layer in enumerate(network):
-            for j,neuron in enumerate(layer):
-                if (random() <= fromFirst):
-                    network[i][j] = self.network[i][j]
-                else:
+            for j in enumerate(layer):
+                if (random() > fromFirst):
                     network[i][j] = other.network[i][j]
         return DNA(self.arhitecture,network)
 

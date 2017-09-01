@@ -21,6 +21,16 @@
 #include <utility>
 #include <chrono>
 #include <random>
+class RandomGenerator
+{
+public:
+    static int GetNumber(const int x) {
+        static auto d = std::chrono::system_clock::now().time_since_epoch();
+        static std::mt19937 gen(std::chrono::duration_cast<std::chrono::milliseconds>(d).count());
+        static std::uniform_int_distribution <int> dist(1, 1<<14);
+        return dist(gen) % x;
+    }
+};
 std::pair<int, int> GetPoints(const std::vector<int>& states,
                               const std::vector<int>& values, const std::vector<int>&neighbors)
 {
@@ -120,14 +130,12 @@ int main(int argc, const char* argv[])
         fflush(stderr);
     }
     std::pair<int, int> points[2];
-    auto d = std::chrono::system_clock::now().time_since_epoch();
-    std::mt19937 gen(std::chrono::duration_cast<std::chrono::milliseconds>(d).count());
-    std::uniform_int_distribution <int> dist(1, (1 << 10));
 
     for (int first = 0; first < 2; first++) {
 //        clock_t start = clock();
         FILE* clients[2];
         clients[0] = popen(player1, "r+");
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         clients[1] = popen(player2, "r+");
         fflush(stderr);
         if (clients[0] == NULL || clients[1] == NULL) {
@@ -140,7 +148,7 @@ int main(int argc, const char* argv[])
         for (int i = 1; i <= blockedCells; i++) {
             int x;
             do {
-                x = dist(gen) * dist(gen) % graph.size();
+                x = RandomGenerator::GetNumber(graph.size());
             } while (states[x] != 0);
             
             states[x] = -1;

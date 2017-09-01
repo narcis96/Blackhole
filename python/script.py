@@ -50,9 +50,8 @@ if __name__ == '__main__':
        sys.exit(-1)
     print ('Compile successful')
 
-    bot1 = CBot(weights=[0.7, 0.85, 1],executable = sourceName, startMoves=4, step3=16, step4=14, stopFinal=9, toErase = 20)
-    bot2 = CBot(weights=[0.7, 0.85, 1],executable = sourceName, startMoves=4, step3=14, step4=13, stopFinal=9, toErase = 20)
-    bot3 = CBot(weights=[0.7, 0.85, 1],executable = sourceName, startMoves=4, step3=13, step4=12, stopFinal=9, toErase = 20)
+    bot1 = CBot(weights=[0.7, 0.85, 1],executable = sourceName, probabilities = [100, 0, 0, 0], func = 'log', startMoves=4, step3=14, step4=13, stopFinal=9, toErase = 20)
+    bot2 = CBot(weights=[0.7, 0.85, 1],executable = sourceName, probabilities = [100, 0, 0, 0], func = 'log', startMoves=4, step3=14, step4=13, stopFinal=9, toErase = 20)
     dna = DNA.ReadFromJson('./bots/9.json')
     print(dna.arhitecture)
     print(dna.network)
@@ -63,13 +62,13 @@ if __name__ == '__main__':
     bot1.WriteJson('./import/bot1.json')
     bot2.WriteJson('./import/bot2.json')
 
-    '''
+
     cmd = []
     cmd.append('./' + serverName)
     cmd.append('-player1')
     cmd.append(str(bot1))
     cmd.append('-player2')
-    cmd.append(str(bot3))
+    cmd.append(str(bot2))
     cmd.append('-graphPath')
     cmd.append(params['graphPath'])
     cmd.append('-blockedCells')
@@ -86,8 +85,9 @@ if __name__ == '__main__':
     '''
     bots = []
     bots.append(bot1)
-    bots.append(pyBot)
+    bots.append(bot2)
     params['players'] = bots
     scores = Battle(params)
     print (scores)
+    '''
 

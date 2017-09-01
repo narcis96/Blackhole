@@ -13,10 +13,16 @@
 #include <cassert>
 #include <tuple>
 #include <string>
+#include <sstream>
 #include <cstring>
-#include <set>
+#include <utility>
+#include <chrono>
+#include <iterator>
+#include <random>
 #include <unordered_set>
 #include <unordered_map>
+#include <map>
+#include <set>
 #ifdef __APPLE__
 #include <sys/types.h>
 #include <unistd.h>
@@ -34,6 +40,16 @@ enum class CellState
     MINE,
     OPPONENT
 };
+class RandomGenerator
+{
+public:
+    static int GetNumber(const int x) {
+        static auto d = std::chrono::system_clock::now().time_since_epoch();
+        static std::mt19937 gen(std::chrono::duration_cast<std::chrono::milliseconds>(d).count());
+        static std::uniform_int_distribution <int> dist(1, 1<<14);
+        return dist(gen) % x;
+    }
+};
 
 class BlackholeSolver
 {
@@ -41,17 +57,18 @@ public:
     BlackholeSolver(const std::vector<std::vector<int>>&graph, const int& moves,
                     const long double* weights, const unsigned long& stopFinal,
                     const int& startMoves, const int& step3, const int& step4,
-                    const int& toErase, const long double* probabilities)
+                    const int& toErase, const long double* probabilities,
+                    const char* func, const char* func2 = NULL)
     : m_graph(graph)
     , m_totalMoves(moves)
     , m_turn(0)
     , m_weights(weights)
+    , m_probabilities(probabilities)
     , m_stopFinal(stopFinal)
     , m_startMoves(startMoves)
     , m_erase(toErase)
     , m_step3(step3)
     , m_step4(step4)
-	, m_probabilities(probabilities)
     {
 #ifdef USE_ASSERT
         assert(m_graph.size() > 0 && moves > 0);
@@ -63,7 +80,22 @@ public:
         m_opponentAvailableValues = m_availableValues;
         for (int i = 0; i < m_graph.size(); i++)
             m_freeCells.insert(i);
+        std::map < std::string , std::function<double(int)> > m;
+        m["log"] = [](const int x) -> double {
+            assert(x > 0);
+            return log(x);
+        };
+        m["sqrt"] = [](const int x) -> double {
+            assert(x > 0);
+            return sqrt(x);
+        };
+        m["x"] = [](const int x) -> double {
+            assert(x > 0);
+            return x;
+        };
+        m_func = m[func];
     }
+    
     void MarkBlocked(const int& i)
     {
 #ifdef USE_ASSERT
@@ -93,7 +125,13 @@ public:
                              [&](const int& pos1, const int& pos2) -> bool {
                                  return GetCost(pos1) < GetCost(pos2);
                              });
-            answer = std::tuple<int, int>(*maxPos, *m_availableValues.rbegin());
+            auto it = m_availableValues.rbegin();
+            for (int i = 4; i <= 5; i++) {
+                if (rand()% 10 <= i)
+//                if (RandomGenerator::GetNumber(10) <= i)
+                    it++;
+            }
+            answer = std::tuple<int, int>(*maxPos, *it);
         } else {
             if (IsFinal() == true) {
 #ifdef MY_DEBUG
@@ -234,23 +272,27 @@ private:
         } else {
             if (m_freeCells.size() == stopSize) {
                 double cost = 0;
-                int count = 1;
-                auto magic = [](const int x) -> double { return log(x); };
+                int count = 0;
                 for (const auto& i : m_freeCells) {
                     if (m_cellState[i] == CellState::EMPTY) {
                         int win = GetWin(i);
                         if (win != 0) {
                             if (win > 0) {
-                                cost += magic(win);
+                                cost += m_func(win);
                                 count += 1;
                             } else {
-                                cost -= magic(-win);
+                                cost -= m_func(-win);
                                 count -= 1;
                             }
                         }
                     }
                 }
-                cost += count;
+                std::vector<long double> para{cost, 1.0*count};
+                std::vector<long double> w{0.65, 0.35};
+                cost = 0;
+                for (int i = 0; i < para.size(); i++) {
+                    cost += 1.0*para[i] * w[i];
+                }
                 return std::make_tuple(cost, -1, -1);
             }
         }
@@ -335,12 +377,10 @@ private:
 				int dim = sizeof(m_probabilities) / sizeof(*m_probabilities);
 				for (int i = 0; i < sons.size() && i < dim; ++i)
 				{
-					if (rand() % 100 <= m_probabilities[i]) {
+                    if (rand() % 100 <= m_probabilities[i] ){
+                    //if (RandomGenerator::GetNumber(100) <= m_probabilities[i]) {
 						answer = std::make_tuple(sons[i], -1, -1);
 					}
-				}
-				if (std::get<0>(answer) > std::get<0>(sonBest)) {
-					answer = std::make_tuple(std::get<0>(sonBest), -1, -1);
 				}
 			}
         }
@@ -442,6 +482,8 @@ private:
     const int m_erase;
     const int m_step3;
     const int m_step4;
+    std::function<long double(int)>m_func;
+    std::function<long double(int)>m_func2;
 };
 const char *graph = 
 "36\n\
@@ -616,7 +658,7 @@ const char *graph =
 #ifdef LOCAL
 std::string GetGraph(const char* graphPath)
 {
-	FILE * file = fopen("graphPath", "r");
+	FILE *file = fopen(graphPath, "r");
 	fseek(file, 0, SEEK_END);
 	long lSize = ftell(file);
 	rewind(file);
@@ -625,26 +667,26 @@ std::string GetGraph(const char* graphPath)
 	graph = (char*)malloc(sizeof(char)*(lSize + 1));
 	memset(graph, 0, sizeof(char)*(lSize + 1));
 	fread(graph, sizeof(char), lSize, file);
-
-	return std::string(graph)
+    fclose(file);
+    return std::string(graph);
 }
 #else
-std::string GetGraph()
+std::string GetGraph(const char*)
 {
 	return std::string(graph);
 }
 #endif
 
-std::vector<std::vector<int>>ReadGraph(const char* graph) {
-    std::ifstream f(graphPath);
-    int n, x, y;
-	sscanf(graph, "%d\n", &n);
+std::vector<std::vector<int>>ReadGraph(const char* graphContent) {
+    int n, x, y, offset = 0;
+	sscanf(graphContent, "%d%n", &n, &offset);
+    graphContent += offset;
     std::vector<std::vector<int>>graph(n, std::vector<int>());
-    while(sscanf(graph, "%d %d\n", &x, &y)) {
+    while(sscanf(graphContent, "%d %d%n", &x, &y, &offset) == 2) {
         graph[x].push_back(y);
         graph[y].push_back(x);
+        graphContent += offset;
     }
-    f.close();
     return graph;
 }
 
@@ -656,80 +698,93 @@ int main(int argc, const char* argv[])
         std::cerr << CLIENT << argv[i]<< " " << std::endl
         << std::flush;
     }*/
-    std::vector<long double> weights(3, -1);
-	std::vector<long double> probabilities(3, -1);
+    std::vector<long double> weights, probabilities;
 	
     int stopFinal = -1, startMoves = -1, toErase = -1, step3 = -1, step4 = -1;
     std::vector<std::vector<int>>graph;
-	std::string graphStr;
-    if (argc > 1) {
-        bool weightsSetted = false;
-		bool probabilitiesSetted = false;
-        for (int i = 1; i < argc - 1; i++) {
-            if (strcmp(argv[i], "-weights") == 0) {
-                weightsSetted = true;
-                sscanf(argv[i + 1], "%Lf,%Lf,%Lf", &weights[0], &weights[1],
-                       &weights[2]);
-            }
-            if (strcmp(argv[i], "-startMoves") == 0) {
-                startMoves = atoi(argv[i + 1]);
-            }
-            if (strcmp(argv[i], "-stopFinal") == 0) {
-                stopFinal = atoi(argv[i + 1]);
-            }
-            if (strcmp(argv[i], "-erase") == 0) {
-                toErase = atoi(argv[i + 1]);
-            }
-            if (strcmp(argv[i], "-step3") == 0) {
-                step3 = atoi(argv[i + 1]);
-            }
-            if (strcmp(argv[i], "-step4") == 0) {
-                step4 = atoi(argv[i + 1]);
-            }
-            if (strcmp(argv[i], "-blockedCells") == 0) {
-                blockedCells = atoi(argv[i + 1]);
-            }
-            if (strcmp(argv[i], "-moves") == 0) {
-                moves = atoi(argv[i + 1]);
-            }
-            if (strcmp(argv[i], "-graphPath") == 0) {
-                graphStr = GetGraph(argv[i + 1]);
-            }
-			if (strcmp(argv[i], "-probabilities") == 0) {
-				probabilitiesSetted = true;
-				sscanf(argv[i + 1], argv[i + 2], &probabilities[0], &probabilities[1],
-					&probabilities[2]);
-			}
+	std::string graphStr, func, func2;
+#if defined LOCAL
+    for (int i = 1; i < argc - 1; i++) {
+        if (strcmp(argv[i], "-weights") == 0) {
+            std::string sentence = argv[i + 1];
+            std::replace(sentence.begin(), sentence.end(), ',', ' ');
+            std::istringstream iss(sentence);
+            weights = std::vector<long double> {std::istream_iterator<long double>{iss},
+                std::istream_iterator<long double>{}};
         }
-        assert(step3 != -1);
-        assert(step4 != -1);
-        assert(stopFinal != -1);
-        assert(startMoves != -1);
-        assert(blockedCells != -1);
-        assert(moves != -1);
-        assert(weightsSetted);
-		assert(probabilitiesSetted);
-    } else {
-        blockedCells = 5;
-        moves = 15;
-        weights[0] = 0.7;  // I winn
-        weights[1] = 0.85; // zero
-        weights[2] = 1;    // opponent
-        step3 = 14;
-        step4 = 13;
-        stopFinal = 9;
-        startMoves = 4;
-        toErase = -1;
-		graphStr = GetGraph();
+        if (strcmp(argv[i], "-startMoves") == 0) {
+            startMoves = atoi(argv[i + 1]);
+        }
+        if (strcmp(argv[i], "-stopFinal") == 0) {
+            stopFinal = atoi(argv[i + 1]);
+        }
+        if (strcmp(argv[i], "-erase") == 0) {
+            toErase = atoi(argv[i + 1]);
+        }
+        if (strcmp(argv[i], "-step3") == 0) {
+            step3 = atoi(argv[i + 1]);
+        }
+        if (strcmp(argv[i], "-step4") == 0) {
+            step4 = atoi(argv[i + 1]);
+        }
+        if (strcmp(argv[i], "-blockedCells") == 0) {
+            blockedCells = atoi(argv[i + 1]);
+        }
+        if (strcmp(argv[i], "-moves") == 0) {
+            moves = atoi(argv[i + 1]);
+        }
+        if (strcmp(argv[i], "-graphPath") == 0) {
+            graphStr = GetGraph(argv[i + 1]);
+        }
+        if (strcmp(argv[i], "-probabilities") == 0) {
+            std::string sentence = argv[i + 1];
+            std::replace(sentence.begin(), sentence.end(), ',', ' ');
+            std::istringstream iss(sentence);
+            probabilities = std::vector<long double> {std::istream_iterator<long double>{iss},
+                std::istream_iterator<long double>{}};
+        }
+        if (strcmp(argv[i], "-func") == 0) {
+            func = argv[i + 1];
+        }
+        
+        if (strcmp(argv[i], "-func2") == 0) {
+            func2 = argv[i + 1];
+        }
     }
-	graph = ReadGraph(graphStr);
-#ifdef MY_DEBUG
-    std::cerr << CLIENT << "weights= " << weights[0]<< " " << weights[1] <<" " << weights[2]<< std::endl
-    << std::flush;
+    assert(weights.size() > 0);
+    assert(startMoves != -1);
+    assert(stopFinal != -1);
+    assert(step3 != -1);
+    assert(step4 != -1);
+    assert(blockedCells != -1);
+    assert(moves != -1);
+    assert(graphStr.size() > 0);
+    assert(probabilities.size() > 0);
+    assert(func.size() > 0);
+//   assert(func2.size() > 0);
+#else
+    blockedCells = 5;
+    moves = 15;
+    step3 = 14;
+    step4 = 13;
+    stopFinal = 9;
+    startMoves = 4;
+    toErase = -1;
+    weights = std::vector < long double>{0.7, 0.85, 1}; //I win, zero, opponent
+    probabilities = std::vector < long double>{100, 50, 25};//first, second, third opponent mistake
+    graphStr = GetGraph();
+    func = "log";
+    func2 = "sqrt";
 #endif
-    
+#ifdef MY_DEBUG
+//    std::cerr << CLIENT << "weights= " << weights[0]<< " " << weights[1] <<" " << weights[2]<< std::endl
+//    << std::flush;
+//    std::cerr << CLIENT << "probabilities= " << probabilities[0]<< " " << probabilities[1] <<" " << probabilities[2]<< std::endl
+//    << std::flush;
+#endif
+    graph = ReadGraph(graphStr.c_str());
     BlackholeSolver solver(graph, moves, weights.data(), stopFinal,
-                           startMoves, step3, step4, toErase);
+                           startMoves, step3, step4, toErase, probabilities.data(), func.c_str());
     
     auto ConvertToIndex = [](const char& line,
                              const char& pos) -> int {
@@ -784,6 +839,7 @@ int main(int argc, const char* argv[])
 #endif
         
     };
+
     for (int i = 0; i < blockedCells; i++) {
 #ifdef LOCAL
         int indx;
@@ -793,10 +849,6 @@ int main(int argc, const char* argv[])
         std::cin >> line >> pos;
         int indx = ConvertToIndex(line, pos);
 #endif
-        
-#ifdef MY_DEBUG
-        std::cerr << CLIENT << indx << std::endl << std::flush;
-#endif
         solver.MarkBlocked(indx);
 
     }
@@ -805,9 +857,6 @@ int main(int argc, const char* argv[])
     CellState turn;
     if (command == "Start") {
         turn = CellState::MINE;
-#ifdef MY_DEBUG
-        std::cerr << CLIENT << "Start" << std::endl << std::flush;
-#endif
     } else {
         turn = CellState::OPPONENT;
     }

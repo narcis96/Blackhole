@@ -1,8 +1,10 @@
 import json
 from argparse import Namespace
 class CBot(object):
-    def __init__(self, executable, weights, startMoves, step3, step4, stopFinal, toErase):
+    def __init__(self, executable, weights, probabilities, func, startMoves, step3, step4, stopFinal, toErase):
         self.weights = weights
+        self.probabilities = probabilities
+        self.func = func
         self.startMoves = startMoves
         self.step3 = step3
         self.step4 = step4
@@ -13,10 +15,11 @@ class CBot(object):
     def __str__(self):
         return self.executable + ' -weights ' + str(self.weights[0])\
                + ',' + str(self.weights[1]) + ',' + str(self.weights[2])\
-               + ' -startMoves ' + str(self.startMoves) \
+               + ' -startMoves ' + str(self.startMoves)  + ' -func ' + self.func\
                + ' -step3 ' + str(self.step3) + ' -step4 ' + str(self.step4)\
-               + ' -stopFinal ' + str(self.stopFinal) + ' -erase ' + str(self.toErase)
-
+               + ' -stopFinal ' + str(self.stopFinal) + ' -erase ' + str(self.toErase)\
+               + ' -probabilities ' + str(self.probabilities[0]) + ','+str(self.probabilities[1])\
+               + ',' + str(self.probabilities[2]) + ','+str(self.probabilities[3])
     def __ToJson(self):
         return json.dumps(self, default=lambda o: o.__dict__,
             sort_keys=True, indent=4)
@@ -33,7 +36,7 @@ class CBot(object):
     def ReadFromJson(path):
         with open(path) as data_file:
             param = CBot.json2obj(json.load(data_file))
-        return CBot(param.executable, param.weights, param.startMoves, param.step3, param.step4, param.stopFinal, param.toErase)
+        return CBot(param.executable, param.weights, param.probabilities, param.func, param.startMoves, param.step3, param.step4, param.stopFinal, param.toErase)
 
 class PythonBot():
     def __init__(self, executable, path, blockedCells, moves):

@@ -107,7 +107,7 @@ int main(int argc, const char* argv[])
         for (int i = 0; i < players.size(); i++)
             for (int j = i + 1; j < players.size(); j++) {
                 while (availableThreads.load() == 0) {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                    std::this_thread::sleep_for(std::chrono::seconds(1));
                 }
                 availableThreads -= 1;
                 
@@ -121,7 +121,7 @@ int main(int argc, const char* argv[])
 //                fprintf(stderr, "cmd = %s\n", cmd.c_str());
 //                fflush(stderr);
                 FILE* pipe = popen(cmd.c_str(), "r+");
-                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 threads.emplace_back(Battle, pipe, i, j,
                                      [&myMutex, &scores, &matches, players,
                                       &availableThreads, &debug](int player1Index, int player2Index,
