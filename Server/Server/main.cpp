@@ -45,12 +45,12 @@ std::pair<int, int> GetPoints(const std::vector<int>& states,
         }
     return points;
 }
-int GetEmptyCell(const std::vector<int>& states, const std::vector<int>& values)
+int GetEmptyCell(const std::vector<int>& states)
 {
     int count = 0;
     int emptyCell = 0;
     for (int i = 0; i < states.size(); i++) {
-        if (values[i] == 0 && states[i] != -1) // the cell is empty
+        if (states[i] == -2) // the cell is empty
         {
             count += 1;
             assert(count == 1 && "More that one cell empty");
@@ -130,33 +130,48 @@ int main(int argc, const char* argv[])
         fflush(stderr);
     }
     std::pair<int, int> points[2];
-
+    std::vector<int> playedValues[2][2];
+    
+    std::vector<int> values(graph.size(), -2);
+    std::vector<int> states(graph.size(), -2);
+    std::vector<int> blocked;
+    
+    for (int i = 1; i <= blockedCells; i++) {
+        int x;
+        do {
+            x = RandomGenerator::GetNumber(graph.size());
+        } while (states[x] == -1);
+        states[x] = -1;
+        blocked.push_back(x);
+    }
+    
     for (int first = 0; first < 2; first++) {
 //        clock_t start = clock();
         FILE* clients[2];
         clients[0] = popen(player1, "r+");
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(30));
         clients[1] = popen(player2, "r+");
         fflush(stderr);
         if (clients[0] == NULL || clients[1] == NULL) {
             fprintf(stderr, "popen() failed");
             return EXIT_FAILURE;
         }
-        std::vector<int> values(graph.size(),0);
-        std::vector<int> states(graph.size(),0);
+        std::fill(values.begin(), values.end(), -2);
+        std::fill(states.begin(), states.end(), -2);
         
         for (int i = 1; i <= blockedCells; i++) {
             int x;
             do {
                 x = RandomGenerator::GetNumber(graph.size());
-            } while (states[x] != 0);
-            
+            } while (states[x] == -1);
+
             states[x] = -1;
+            values[x] = -1;
             
             std::stringstream buff;
             buff << x;
             if (debug == true) {
-                fprintf(stderr, "Server(%d) wrote:%s\n", getpid(),buff.str().c_str());
+                fprintf(stderr, "Server(%d) : wrote %s\n", getpid(),buff.str().c_str());
                 fflush(stderr);
             }
             for (int id = 0; id < 2; id++) {
@@ -167,7 +182,7 @@ int main(int argc, const char* argv[])
         fprintf(clients[first], "Start\n");
         fflush(clients[first]);
         if (debug == true) {
-            fprintf(stderr, "Server(%d) wrote: Start\n", getpid());
+            fprintf(stderr, "Server(%d) : wrote Start\n", getpid());
             fflush(stderr);
         }
         int turn = first;
@@ -186,12 +201,12 @@ int main(int argc, const char* argv[])
                 fflush(stderr);
             }
 
-            
             assert(0 <= indx  && indx < graph.size() && "Server :Index out of boundaries");
-            assert(values[indx] == 0 && states[indx] != -1 &&
-                   "Server :Not a valid move, the cell is not empty");
             assert(1 <= val && val <= moves &&
                    "Server: Not a valid move, value is wrong");
+            assert(values[indx] == -2 && states[indx] == -2 &&
+                   "Server :Not a valid move, the cell is not empty");
+            playedValues[first][turn].push_back(val);
             states[indx] = turn;
             values[indx] = val;
             
@@ -201,7 +216,7 @@ int main(int argc, const char* argv[])
             fflush(clients[turn]);
         }
         
-        int emptyCell = GetEmptyCell(states, values);
+        int emptyCell = GetEmptyCell(states);
         points[first] = GetPoints(states, values, graph[emptyCell]);
         for (auto& client : clients) {
             int status = pclose(client);
@@ -218,6 +233,21 @@ int main(int argc, const char* argv[])
     //	fprintf (stderr, "Time:\n1:%Lf 2:%Lf\n", timeElapsed[0],
     // timeElapsed[1]);
     //    fflush (stderr);
+    
+    if (debug == true) {
+        for (int game = 0; game < 2; game++) {
+            for (int i = 0; i < 2; i++) {
+                fprintf(stderr, "Server(%d) : player %d values:", getpid(), i);
+                for (auto x : playedValues[game][i]) {
+                    fprintf(stderr, "%d ", x);
+                
+                }
+                fprintf(stderr, "\n");
+                fflush(stderr);
+            }
+        }
+    }
+    
     for (const auto& score : points) {
         if (debug == true) {
             fprintf(stderr, "Server(%d) : %d %d\n", getpid(), score.first, score.second);

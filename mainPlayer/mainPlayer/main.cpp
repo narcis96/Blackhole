@@ -57,11 +57,11 @@ public:
     BlackholeSolver(const std::vector<std::vector<int>>&graph, const int& moves,
                     const long double* weights, const unsigned long& stopFinal,
                     const int& startMoves, const int& step3, const int& step4,
-                    const int& toErase, const long double* probabilities,
+                    const int& toErase, std::vector<int> &probabilities,
                     const char* func, const char* func2 = NULL)
-    : m_graph(graph)
+    : m_turn(0)
+    , m_graph(graph)
     , m_totalMoves(moves)
-    , m_turn(0)
     , m_weights(weights)
     , m_probabilities(probabilities)
     , m_stopFinal(stopFinal)
@@ -126,9 +126,8 @@ public:
                                  return GetCost(pos1) < GetCost(pos2);
                              });
             auto it = m_availableValues.rbegin();
-            for (int i = 4; i <= 5; i++) {
-                if (rand()% 10 <= i)
-//                if (RandomGenerator::GetNumber(10) <= i)
+            for (int i = 3; i <= 4; i++) {
+                if (1 + RandomGenerator::GetNumber(10) <= i)
                     it++;
             }
             answer = std::tuple<int, int>(*maxPos, *it);
@@ -287,8 +286,8 @@ private:
                         }
                     }
                 }
-                std::vector<long double> para{cost, 1.0*count};
-                std::vector<long double> w{0.65, 0.35};
+                std::vector<double> para{cost, 1.0*count};
+                std::vector<double> w{0.6, 0.4};
                 cost = 0;
                 for (int i = 0; i < para.size(); i++) {
                     cost += 1.0*para[i] * w[i];
@@ -346,7 +345,7 @@ private:
                 else
                     availableValues = m_opponentAvailableValues;
             }
-			std::vector < double >sons;
+			std::set < double >sons;
             for (const auto& value : availableValues) {
                 if (turn == 1) {
                     MarkMine(cell, value);
@@ -367,21 +366,18 @@ private:
 					}
 				}
 				else {
-					sons.push_back(std::get<0>(sonBest));
+					sons.insert(std::get<0>(sonBest));
 				}
             }
 
 
 			if (turn == 0) {
-				std::sort(sons.begin(), sons.end());
-				int dim = sizeof(m_probabilities) / sizeof(*m_probabilities);
-				for (int i = 0; i < sons.size() && i < dim; ++i)
-				{
-                    if (rand() % 100 <= m_probabilities[i] ){
-                    //if (RandomGenerator::GetNumber(100) <= m_probabilities[i]) {
-						answer = std::make_tuple(sons[i], -1, -1);
-					}
-				}
+                int i = 0;
+                for (auto it = sons.begin(); it != sons.end() && m_probabilities.size(); it++, i += 1) {
+                    if (1 + RandomGenerator::GetNumber(100) <= m_probabilities[i]) {
+                        answer = std::make_tuple(*it, -1, -1);
+                    }
+                }
 			}
         }
         return answer;
@@ -464,8 +460,6 @@ private:
         return (0 <= indx && indx < m_graph.size());
     }
     
-    const std::vector<std::vector<int>> m_graph;
-    const int m_totalMoves;
     int m_turn;
     std::vector<CellState> m_cellState;
     std::vector<int> m_cellValues;
@@ -474,9 +468,11 @@ private:
     std::set<int> m_opponentAvailableValues;
 //    const int dx[6] = { 0, 0, -1, 1, -1, 1 };
 //    const int dy[6] = { 1, -1, 0, 0, -1, 1 };
-    
+
+    const std::vector<std::vector<int>> m_graph;
+    const int m_totalMoves;
     const long double* const m_weights;
-	const long double* const m_probabilities;
+    const std::vector<int> m_probabilities;
     const unsigned long m_stopFinal;
     const int m_startMoves;
     const int m_erase;
@@ -698,7 +694,8 @@ int main(int argc, const char* argv[])
         std::cerr << CLIENT << argv[i]<< " " << std::endl
         << std::flush;
     }*/
-    std::vector<long double> weights, probabilities;
+    std::vector<long double> weights;
+    std::vector<int> probabilities;
 	
     int stopFinal = -1, startMoves = -1, toErase = -1, step3 = -1, step4 = -1;
     std::vector<std::vector<int>>graph;
@@ -709,7 +706,7 @@ int main(int argc, const char* argv[])
             std::string sentence = argv[i + 1];
             std::replace(sentence.begin(), sentence.end(), ',', ' ');
             std::istringstream iss(sentence);
-            weights = std::vector<long double> {std::istream_iterator<long double>{iss},
+            weights = std::vector< long double> {std::istream_iterator<long double>{iss},
                 std::istream_iterator<long double>{}};
         }
         if (strcmp(argv[i], "-startMoves") == 0) {
@@ -740,8 +737,8 @@ int main(int argc, const char* argv[])
             std::string sentence = argv[i + 1];
             std::replace(sentence.begin(), sentence.end(), ',', ' ');
             std::istringstream iss(sentence);
-            probabilities = std::vector<long double> {std::istream_iterator<long double>{iss},
-                std::istream_iterator<long double>{}};
+            probabilities = std::vector<int> {std::istream_iterator<int>{iss},
+                std::istream_iterator<int>{}};
         }
         if (strcmp(argv[i], "-func") == 0) {
             func = argv[i + 1];
@@ -765,15 +762,15 @@ int main(int argc, const char* argv[])
 #else
     blockedCells = 5;
     moves = 15;
-    step3 = 14;
+    step3 = 16;
     step4 = 13;
     stopFinal = 9;
     startMoves = 4;
-    toErase = -1;
-    weights = std::vector < long double>{0.7, 0.85, 1}; //I win, zero, opponent
-    probabilities = std::vector < long double>{100, 50, 25};//first, second, third opponent mistake
-    graphStr = GetGraph();
-    func = "log";
+    toErase = 22;
+    weights = std::vector <long double>{0.7, 0.85, 1}; //I win, zero, opponent
+    probabilities = std::vector <int>{100, 0, 0};//first, second, third opponent mistake
+    graphStr = GetGraph(NULL);
+    func = "x";
     func2 = "sqrt";
 #endif
 #ifdef MY_DEBUG
@@ -784,7 +781,7 @@ int main(int argc, const char* argv[])
 #endif
     graph = ReadGraph(graphStr.c_str());
     BlackholeSolver solver(graph, moves, weights.data(), stopFinal,
-                           startMoves, step3, step4, toErase, probabilities.data(), func.c_str());
+                           startMoves, step3, step4, toErase, probabilities, func.c_str());
     
     auto ConvertToIndex = [](const char& line,
                              const char& pos) -> int {
@@ -792,7 +789,6 @@ int main(int argc, const char* argv[])
         int j = pos - '1';
         return i*(i+1)/2 + j;
     };
-    
     auto ConvertToCell = [](int indx) -> std::tuple<char, char> {
         indx = indx + 1;
         int line = 0;
@@ -807,8 +803,9 @@ int main(int argc, const char* argv[])
             line += 1;
             count += line;
         }
-        return {i + 'A' - j, j + '1'};
+        return std::make_tuple(i + 'A' - j, j + '1');
     };
+    
     auto OpponentTurn = [ConvertToIndex, &solver](const std::string& command) {
         int indx, val;
 #ifdef LOCAL

@@ -131,7 +131,7 @@ int main(int argc, const char* argv[])
                                          scores[player1Index] += player1Score;
                                          scores[player2Index] += player2Score;
                                          matches += 1;
-					                    if (debug == true) {
+					                     if (debug == true) {
 	                                         fprintf(stderr, "After match:%d\n", matches);
 	                                         for (int i = 0; i < players.size(); i++) {
 	                                             fprintf(stderr, "%d ", scores[i]);

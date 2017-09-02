@@ -10,11 +10,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "mainPlayer/main.cpp"
-            timestampString = "525995687.155369"
+            timestampString = "526084597.605411"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "590"
-            endingLineNumber = "590">
+            startingLineNumber = "586"
+            endingLineNumber = "586">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -24,13 +24,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "mainPlayer/main.cpp"
-            timestampString = "525995577.430149"
+            timestampString = "526084597.605411"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "457"
-            endingLineNumber = "457"
-            landmarkName = "class BlackholeSolver"
-            landmarkType = "3">
+            startingLineNumber = "453"
+            endingLineNumber = "453"
+            landmarkName = "CheckCell(const int&amp; i)"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -40,12 +40,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "mainPlayer/main.cpp"
-            timestampString = "525995687.155369"
+            timestampString = "526084597.605411"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "671"
-            endingLineNumber = "671"
-            landmarkName = "ReadGraph(const char* graphContent)"
+            startingLineNumber = "667"
+            endingLineNumber = "667"
+            landmarkName = "GetGraph(const char* graphPath)"
             landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
