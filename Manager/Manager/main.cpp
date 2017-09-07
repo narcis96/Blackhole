@@ -7,16 +7,15 @@
 //
 
 #include <iostream>
-#include <vector>
-#include <string>
 #include <sstream>
-#include <cassert>
 #include <atomic>
 #include <mutex>
 #include <algorithm>
 #include <thread>
 #include <chrono>
 #include <functional>
+//#include "ParamParser.h"
+#include "../../ParamParser/ParamParser.h"
 void Battle(FILE* pipe, int player1Index, int player2Index,
        std::function<void(int, int, int, int)> callback)
 {
@@ -39,7 +38,7 @@ void Battle(FILE* pipe, int player1Index, int player2Index,
             exit(EXIT_FAILURE);
         }
         sscanf(buff, "%d %d", &score1, &score2);
-//        fprintf(stderr, "Manager received(%s) : %d %d at match %d\n", threadId.c_str(), score1, score2, match);
+        fprintf(stderr, "Manager(%s) received : %d %d at match %d\n", threadId.c_str(), score1, score2, match);
         fflush(stderr);
         player1Score += score1;
         player2Score += score2;
@@ -52,20 +51,7 @@ void Battle(FILE* pipe, int player1Index, int player2Index,
     fflush(stderr);
     callback(player1Index, player2Index, player1Score, player2Score);
 }
-std::vector<const char*> GetParam(int argc,const char* argv[], const char* option, bool more = false) {
-    std::vector<const char*>values;
-    for (int i = 1; i < argc - 1; i += 2)
-        if (strcmp(argv[i], option) == 0)
-        {
-            values.push_back(argv[i + 1]);
-        }
-    if (values.empty() == true || (more == false && values.size() > 1)) {
-        fprintf(stderr,"Maneger:Parameter %s not found\n", option);
-        fflush(stderr);
-        exit(EXIT_FAILURE);
-    }
-    return values;
-}
+
 
 int main(int argc, const char* argv[])
 {
@@ -80,25 +66,24 @@ int main(int argc, const char* argv[])
     
     std::atomic<int> availableThreads;
     availableThreads = std::thread::hardware_concurrency() - 1; //- main thread
-
-    std::vector<const char*> players = GetParam(argc, argv,"-player", true);
-    const char* server = GetParam(argc,argv,"-server").back();
-    const bool debug = atoi(GetParam(argc,argv, "-debug").back());
-    const char* graphPath = GetParam(argc,argv,"-graphPath").back();
-    const int rounds = atoi(GetParam(argc,argv, "-rounds").back());
-    const char* blockedCells = GetParam(argc,argv,"-blockedCells").back();
-    const char* moves = GetParam(argc,argv, "-moves").back();
-    const char* debugServer = GetParam(argc,argv, "-debugServer").back();
+    ParamParser parser(argc, argv);
+    std::vector<std::string> players = parser.GetParam("-player", true);
+    std::string server = parser.GetParam("-server");
+    const bool debug = std::stoi(parser.GetParam("-debug"));
+    std::string graphPath = parser.GetParam("-graphPath");
+    const int rounds = std::stoi(parser.GetParam( "-rounds"));
+    std::string blockedCells = parser.GetParam("-blockedCells");
+    std::string moves = parser.GetParam("-moves");
+    std::string debugServer = parser.GetParam("-debugServer");
     assert(rounds > 0);
-    assert(server != NULL);
     assert(players.size() >= 2);
     
     if (debug == true) {
         for (const auto& player : players) {
-            fprintf(stderr, "%s\n", player);
+            fprintf(stderr, "%s\n", player.c_str());
         }
+        fflush(stderr);
     }
-    fflush(stderr);
     std::vector<int> scores(players.size(), 0);
     std::vector<std::thread> threads;
     int matches = 0;

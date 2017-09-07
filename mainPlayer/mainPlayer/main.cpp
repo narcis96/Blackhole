@@ -373,7 +373,7 @@ private:
 
 			if (turn == 0) {
                 int i = 0;
-                for (auto it = sons.begin(); it != sons.end() && m_probabilities.size(); it++, i += 1) {
+                for (auto it = sons.begin(); it != sons.end() && i < m_probabilities.size(); it++, i += 1) {
                     if (1 + RandomGenerator::GetNumber(100) <= m_probabilities[i]) {
                         answer = std::make_tuple(*it, -1, -1);
                     }

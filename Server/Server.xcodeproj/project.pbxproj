@@ -25,6 +25,7 @@
 /* Begin PBXFileReference section */
 		5701CE5F1F40A7DA0044C0E4 /* Server */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Server; sourceTree = BUILT_PRODUCTS_DIR; };
 		5701CE621F40A7DA0044C0E4 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		578B793D1F61EC4400FEE816 /* ParamParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ParamParser.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,6 +42,7 @@
 		5701CE561F40A7DA0044C0E4 = {
 			isa = PBXGroup;
 			children = (
+				578B793D1F61EC4400FEE816 /* ParamParser.h */,
 				5701CE611F40A7DA0044C0E4 /* Server */,
 				5701CE601F40A7DA0044C0E4 /* Products */,
 			);
@@ -218,6 +220,7 @@
 		5701CE671F40A7DA0044C0E4 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				HEADER_SEARCH_PATHS = ../ParamParser/;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -225,6 +228,7 @@
 		5701CE681F40A7DA0044C0E4 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				HEADER_SEARCH_PATHS = ../ParamParser/;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -248,6 +252,7 @@
 				5701CE681F40A7DA0044C0E4 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

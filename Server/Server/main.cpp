@@ -6,21 +6,19 @@
 //  Copyright © 2017 Gemene Narcis. All rights reserved.
 //
 #include <cstdio>
-#include <string>
 #include <cstdlib>
 #include <algorithm>
 #include <sstream>
-#include <vector>
-#include <cassert>
 #include <tuple>
 #include <fstream>
-#include <map>
 #include <sys/types.h>
 #include <unistd.h>
 #include <thread>
 #include <utility>
 #include <chrono>
 #include <random>
+//#include "ParamParser.h"
+#include "../../ParamParser/ParamParser.h"
 class RandomGenerator
 {
 public:
@@ -39,7 +37,7 @@ std::pair<int, int> GetPoints(const std::vector<int>& states,
         if (states[x] == 0) {
             points.first += values[x];
             points.second -= values[x];
-        } else {
+        } else if(states[x] == 1){
             points.second += values[x];
             points.first -= values[x];
         }
@@ -73,26 +71,14 @@ std::vector<std::vector<int>>ReadGraph(const char* graphPath) {
     return graph;
 }
 
-const char* GetParam(int argc, const char* argv[], const char* option) {
-    for (int i = 1; i < argc - 1; i += 2)
-        if (strcmp(argv[i], option) == 0)
-        {
-            i += 1;
-            return argv[i];
-        }
-    fprintf(stderr,"Server:Parameter %s not found\n", option);
-    fflush(stderr);
-    exit(EXIT_FAILURE);
-}
-
 int main(int argc, const char* argv[])
 {
 #ifdef _WIN32
     assert(0 && "Windows does not support popen()");
     return EXIT_FAILURE;
 #endif
-    if (argc < 1+2*6) {
-        fprintf(stderr, "Server(%d):Not enough parameters\n", getpid());
+    if (argc < 1 + 2*8) {
+        fprintf(stderr, "Server(%d):Not enough or too much parameters\n", getpid());
         fflush(stderr);
         return EXIT_FAILURE;
     }
@@ -103,25 +89,37 @@ int main(int argc, const char* argv[])
     std::vector<std::string > params{
         "-player1",
         "-player2",
+        "-printMoves",
+        "-generatedCells",
+//players' parameters have to be lasts
         "-graphPath",
         "-blockedCells",
         "-moves",
         "-debug"
     };
+    ParamParser parser(argc,argv);
     std::map<std::string, std::string> mapParams;
     for (const auto &param: params)
-        mapParams.insert({param,GetParam(argc, argv, param.c_str())});
-    for (const auto &param: mapParams) {
-        if(param.first != "-player1" && param.first != "-player2") {
-            Add(mapParams["-player1"], param.first, param.second);
-            Add(mapParams["-player2"], param.first, param.second);
-        }
+        mapParams.insert({param,parser.GetParam(param.c_str())});
+    for (int i = params.size() - 4; i < params.size(); i++) {//change here when add more parameters
+        Add(mapParams["-player1"], params[i], mapParams[params[i]]);
+        Add(mapParams["-player2"], params[i], mapParams[params[i]]);
     }
     const char* player1 = mapParams["-player1"].c_str();
     const char* player2 = mapParams[ "-player2"].c_str();
     const int blockedCells = std::stoi(mapParams["-blockedCells"]);
     const int moves = std::stoi(mapParams["-moves"]);
     const bool debug = std::stoi(mapParams["-debug"]);
+    const bool printMoves = std::stoi(mapParams["-printMoves"]);
+    const bool generatedCells = std::stoi(mapParams["-generatedCells"]);
+
+    std::vector<int>cells(blockedCells, -1);
+    if(generatedCells == true) {
+        for(const auto& cell: parser.GetParam("-cell", true)) {
+            cells.push_back(std::stoi(cell));
+        }
+    }
+    assert(cells.size() == blockedCells && "Server: Not enough cells setted");
     
     std::vector < std::vector <int > > graph = ReadGraph(mapParams["-graphPath"].c_str());
 
@@ -134,18 +132,13 @@ int main(int argc, const char* argv[])
     
     std::vector<int> values(graph.size(), -2);
     std::vector<int> states(graph.size(), -2);
-    std::vector<int> blocked;
-    
-    for (int i = 1; i <= blockedCells; i++) {
-        int x;
-        do {
-            x = RandomGenerator::GetNumber(graph.size());
-        } while (states[x] == -1);
-        states[x] = -1;
-        blocked.push_back(x);
+
+    std::vector<int>games;
+    games.push_back(0);    
+    if(printMoves == false) {
+        games.push_back(1);
     }
-    
-    for (int first = 0; first < 2; first++) {
+    for(const auto& first:games) {
 //        clock_t start = clock();
         FILE* clients[2];
         clients[0] = popen(player1, "r+");
@@ -159,20 +152,29 @@ int main(int argc, const char* argv[])
         std::fill(values.begin(), values.end(), -2);
         std::fill(states.begin(), states.end(), -2);
         
-        for (int i = 1; i <= blockedCells; i++) {
-            int x;
-            do {
-                x = RandomGenerator::GetNumber(graph.size());
-            } while (states[x] == -1);
-
+        if(generatedCells == false) {
+            for (int i = 0; i < blockedCells; i++) {
+                int x;
+                do {
+                    x = RandomGenerator::GetNumber(graph.size());
+                } while (states[x] == -1);
+                cells[i] = x;
+            }
+        }
+        
+        for (const auto& x: cells) {
             states[x] = -1;
             values[x] = -1;
             
             std::stringstream buff;
             buff << x;
             if (debug == true) {
-                fprintf(stderr, "Server(%d) : wrote %s\n", getpid(),buff.str().c_str());
+                fprintf(stderr, "Server(%d) : wrote %d\n", getpid(), x);
                 fflush(stderr);
+            }
+            if (printMoves == true) {
+                fprintf(stdout, "%d\n",x);
+                fflush(stdout);        
             }
             for (int id = 0; id < 2; id++) {
                 fprintf(clients[id], "%s\n", buff.str().c_str());
@@ -196,6 +198,10 @@ int main(int argc, const char* argv[])
             int indx, val;
             sscanf(buff, "%d=%d", &indx, &val);
             
+            if (printMoves == true) {
+                fprintf(stdout, "%d %d\n", indx, val);
+                fflush(stdout); 
+            }
             if (debug == true) {
                 fprintf(stderr, "Server(%d) : received %s", getpid(), buff);
                 fflush(stderr);
@@ -235,7 +241,7 @@ int main(int argc, const char* argv[])
     //    fflush (stderr);
     
     if (debug == true) {
-        for (int game = 0; game < 2; game++) {
+        for (int game = 0; game < games.size(); game++) {
             for (int i = 0; i < 2; i++) {
                 fprintf(stderr, "Server(%d) : player %d values:", getpid(), i);
                 for (auto x : playedValues[game][i]) {

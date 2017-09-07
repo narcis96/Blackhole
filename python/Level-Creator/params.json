@@ -1,0 +1,28 @@
+{
+	"width" : "800",
+	"height" : "600",
+	
+	"serverPath": "../../Server/Server/main.cpp",
+	"serverName": "./executables/server",
+	"sourcePath": "../../mainPlayer/mainPlayer/main.cpp",
+	"sourceName": "./executables/bot",
+
+	"compile":
+	{
+		"-include": "../../ParamParser/ParamParser.h",
+		"flags":[ " -Wall", " -O3", " -std=c++11"," -lstdc++"]
+	},
+
+	"server":
+	{
+		"debug": 0,
+		"printMoves": 1,
+		"generatedCells": 0
+	},
+	"level":
+	{
+		"graphPath": "../graph.txt",
+		"blockedCells": 5,
+		"moves" : 15
+	}
+}

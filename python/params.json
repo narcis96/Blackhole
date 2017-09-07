@@ -1,19 +1,46 @@
 {
-    "population": 10,
-    "mutation": 0.01,
-	"arhitecture": [3],
-	"botsPath": "./bots",
-	"importFrom": "./import",
+	"train":
+	{
+		"population": 10,
+		"mutation": 0.01,
+		"arhitecture": [3],
+		"botsPath": "./bots",
+		"importFrom": "./import"
+	},
     "sourcePath": "../mainPlayer/mainPlayer/main.cpp",
     "serverPath": "../Server/Server/main.cpp",
     "managerPath": "../Manager/Manager/main.cpp",
 	"sourceName": "./executables/bot",
 	"serverName": "./executables/server",
-	"managerName": "./executables/manager",	
-    "rounds": 5,
-    "graphPath": "graph.txt",
-	"blockedCells": 5,
-	"moves" : 15,
-	"debug": 1,
-	"debugServer": 0
+
+	"compileOptions":
+	{
+		"-include": "../../ParamParser/ParamParser.h",
+		"flags":[ " -Wall", " -O3", " -std=c++11"," -lstdc++"]
+	},
+	"server":
+	{
+		"debug": 0,
+		"printMoves": 1,
+		"generatedCells": 0,
+		"debug": 0
+	},
+	"level":
+	{
+		"graphPath": "../graph.txt",
+		"blockedCells": 5,
+		"moves" : 15
+	},
+	"manager":
+	{
+		"managerName": "./executables/manager",			
+		"rounds": 7
+	},
+	"level":
+	{
+		"graphPath": "graph.txt",
+		"blockedCells": 5,
+		"moves" : 15,
+		"debug": 1
+	}
 }
