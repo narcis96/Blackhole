@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.26730.8
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "python", "python.pyproj", "{75C443EA-150F-4A88-A592-6FD68FEFA4BB}"
 EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Level-Creator", "Level-Creator\Level-Creator.pyproj", "{F9F492CC-9C73-4324-B614-BBFECBF90242}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -13,6 +15,8 @@ Global
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{75C443EA-150F-4A88-A592-6FD68FEFA4BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{75C443EA-150F-4A88-A592-6FD68FEFA4BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9F492CC-9C73-4324-B614-BBFECBF90242}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9F492CC-9C73-4324-B614-BBFECBF90242}.Release|Any CPU.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
