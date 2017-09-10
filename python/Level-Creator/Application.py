@@ -84,4 +84,4 @@ if __name__ == '__main__':
     '''
     app = Application(master = root, width = params['width'], height = params['height'])
     app.mainloop()
-    #root.destroy()
+    root.destroy()

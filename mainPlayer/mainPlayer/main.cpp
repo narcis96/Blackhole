@@ -71,7 +71,7 @@ public:
     , m_step4(step4)
     {
 #ifdef USE_ASSERT
-        assert(m_graph.size() > 0 && moves > 0);
+        assert(m_graph.size() > 0 && moves > 0  && "Server: Graph is empty or moves = 0");
 #endif
         m_cellState = std::vector<CellState>(m_graph.size(), CellState::EMPTY);
         m_cellValues = std::vector<int>(m_graph.size(), 0);

@@ -9,38 +9,32 @@
 	},
     "sourcePath": "../mainPlayer/mainPlayer/main.cpp",
     "serverPath": "../Server/Server/main.cpp",
-    "managerPath": "../Manager/Manager/main.cpp",
+	"managerPath": "../Manager/Manager/main.cpp",
+	
 	"sourceName": "./executables/bot",
 	"serverName": "./executables/server",
-
+	"managerName": "./executables/manager",
+	
 	"compileOptions":
 	{
-		"-include": "../../ParamParser/ParamParser.h",
+		"-include": "../ParamParser/ParamParser.h",
 		"flags":[ " -Wall", " -O3", " -std=c++11"," -lstdc++"]
 	},
 	"server":
 	{
-		"debug": 0,
-		"printMoves": 1,
-		"generatedCells": 0,
-		"debug": 0
-	},
-	"level":
-	{
-		"graphPath": "../graph.txt",
-		"blockedCells": 5,
-		"moves" : 15
+		"debug": 1,
+		"printMoves": 0,
+		"generatedCells": 0
 	},
 	"manager":
 	{
-		"managerName": "./executables/manager",			
+		"debug": 1,
 		"rounds": 7
 	},
 	"level":
 	{
-		"graphPath": "graph.txt",
+		"graphPath": "./graph.txt",
 		"blockedCells": 5,
-		"moves" : 15,
-		"debug": 1
+		"moves" : 15
 	}
 }

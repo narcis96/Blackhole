@@ -7,7 +7,7 @@
 	"sourcePath": "../../mainPlayer/mainPlayer/main.cpp",
 	"sourceName": "./executables/bot",
 
-	"compile":
+	"compileOptions":
 	{
 		"-include": "../../ParamParser/ParamParser.h",
 		"flags":[ " -Wall", " -O3", " -std=c++11"," -lstdc++"]
@@ -19,6 +19,7 @@
 		"printMoves": 1,
 		"generatedCells": 0
 	},
+
 	"level":
 	{
 		"graphPath": "../graph.txt",

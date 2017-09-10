@@ -17,7 +17,6 @@
 #include <utility>
 #include <chrono>
 #include <random>
-//#include "ParamParser.h"
 #include "../../ParamParser/ParamParser.h"
 class RandomGenerator
 {
@@ -86,33 +85,25 @@ int main(int argc, const char* argv[])
     {
         cmd += " " + option +  " " + value + "";
     };
-    std::vector<std::string > params{
-        "-player1",
-        "-player2",
-        "-printMoves",
-        "-generatedCells",
-//players' parameters have to be lasts
+    std::vector<const char* > PlayerParams{
         "-graphPath",
         "-blockedCells",
-        "-moves",
-        "-debug"
+        "-moves"
     };
     ParamParser parser(argc,argv);
-    std::map<std::string, std::string> mapParams;
-    for (const auto &param: params)
-        mapParams.insert({param,parser.GetParam(param.c_str())});
-    for (int i = params.size() - 4; i < params.size(); i++) {//change here when add more parameters
-        Add(mapParams["-player1"], params[i], mapParams[params[i]]);
-        Add(mapParams["-player2"], params[i], mapParams[params[i]]);
+    std::string player1 = parser.GetParam("-player1");
+    std::string player2 = parser.GetParam("-player2");
+    for (const auto& param :PlayerParams) {
+        Add(player1, param, parser.GetParam(param));
+        Add(player2, param, parser.GetParam(param));        
     }
-    const char* player1 = mapParams["-player1"].c_str();
-    const char* player2 = mapParams[ "-player2"].c_str();
-    const int blockedCells = std::stoi(mapParams["-blockedCells"]);
-    const int moves = std::stoi(mapParams["-moves"]);
-    const bool debug = std::stoi(mapParams["-debug"]);
-    const bool printMoves = std::stoi(mapParams["-printMoves"]);
-    const bool generatedCells = std::stoi(mapParams["-generatedCells"]);
-
+    const int blockedCells = std::stoi(parser.GetParam("-blockedCells"));
+    const int moves = std::stoi(parser.GetParam("-moves"));
+    const bool debug = std::stoi(parser.GetParam("-debug"));
+    const bool printMoves = std::stoi(parser.GetParam("-printMoves"));
+    const bool generatedCells = std::stoi(parser.GetParam("-generatedCells"));
+    std::vector < std::vector <int > > graph = ReadGraph(parser.GetParam("-graphPath").c_str());
+    
     std::vector<int>cells(blockedCells, -1);
     if(generatedCells == true) {
         for(const auto& cell: parser.GetParam("-cell", true)) {
@@ -120,11 +111,10 @@ int main(int argc, const char* argv[])
         }
     }
     assert(cells.size() == blockedCells && "Server: Not enough cells setted");
-    
-    std::vector < std::vector <int > > graph = ReadGraph(mapParams["-graphPath"].c_str());
+    assert(graph.size() > 0 && "Server: Graph is empty");
 
     if (debug == true) {
-        fprintf(stderr, "Server(%d): Started \nplayer1 = %s\nplayer2 = %s\n", getpid(), player1, player2);
+        fprintf(stderr, "Server(%d): Started \nplayer1 = %s\nplayer2 = %s\n", getpid(), player1.c_str(), player2.c_str());
         fflush(stderr);
     }
     std::pair<int, int> points[2];
@@ -133,39 +123,36 @@ int main(int argc, const char* argv[])
     std::vector<int> values(graph.size(), -2);
     std::vector<int> states(graph.size(), -2);
 
-    std::vector<int>games;
-    games.push_back(0);    
+    std::vector<int>games(1,0);
     if(printMoves == false) {
         games.push_back(1);
     }
     for(const auto& first:games) {
 //        clock_t start = clock();
         FILE* clients[2];
-        clients[0] = popen(player1, "r+");
-        std::this_thread::sleep_for(std::chrono::milliseconds(30));
-        clients[1] = popen(player2, "r+");
-        fflush(stderr);
+        clients[0] = popen(player1.c_str(), "r+");
+        clients[1] = popen(player2.c_str(), "r+");
         if (clients[0] == NULL || clients[1] == NULL) {
             fprintf(stderr, "popen() failed");
+            fflush(stderr);
             return EXIT_FAILURE;
         }
         std::fill(values.begin(), values.end(), -2);
         std::fill(states.begin(), states.end(), -2);
-        
+
         if(generatedCells == false) {
             for (int i = 0; i < blockedCells; i++) {
                 int x;
                 do {
-                    x = RandomGenerator::GetNumber(graph.size());
+                    x = RandomGenerator::GetNumber(graph.size());    
                 } while (states[x] == -1);
+        
+                states[x] = -1;
+                values[x] = -1;                
                 cells[i] = x;
             }
         }
-        
         for (const auto& x: cells) {
-            states[x] = -1;
-            values[x] = -1;
-            
             std::stringstream buff;
             buff << x;
             if (debug == true) {

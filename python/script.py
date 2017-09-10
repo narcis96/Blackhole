@@ -4,19 +4,36 @@ import json
 from DNA import  *
 def Compile(path, to, compileOptions):
     command = 'clang -o'+ to + ' ' + path;
-    command = command + ' -include ' + compileOptions['include']
+    command = command + ' -include ' + compileOptions['-include']
     for flag in compileOptions['flags']:
         command += flag
     return os.system(command)
 
+def GetServer(params, generatedCells):
+    serverCmd = params['serverName']
+
+    for key, value in params['server'].items():
+        serverCmd +=  ' -' + str(key) + ' ' + str(value)
+
+    for key,value in params['level'].items():
+        serverCmd +=  ' -' + str(key) + ' ' + str(value)
+
+    for cell in generatedCells:
+            serverCmd += ' -cell '+ str(cell)
+
+    assert (params['server']['generatedCells']  == len(generatedCells))
+    return serverCmd
+
+
 def Battle(params):
     command = []
     command.append(params['managerName'])
-    command.append('-server')
-    command.append(params['serverName'])
-    for key,value in params['level'].items():
+
+    for key,value in params['manager'].items():
         command.append('-' + str(key))
         command.append(str(value))
+    command.append('-server')
+    command.append(GetServer(params, []))
     for player in params['players']:
         command.append('-player')
         command.append(str(player))
@@ -26,20 +43,14 @@ def Battle(params):
     scores = [int(line.decode("utf-8")) for line in output.splitlines()]
     return  scores
 
-def Server(bot1, bot2, params):
-    cmd = []
-    cmd.append(params['serverName'])
+def Server(bot1, bot2, params, generatedCells = None):
+    if generatedCells == None:
+        generatedCells = []
+    cmd = GetServer(params, generatedCells).split()
     cmd.append('-player1')
     cmd.append(str(bot1))
     cmd.append('-player2')
     cmd.append(str(bot2))
-    for key,value in params['level'].items():
-        cmd.append('-' + str(key))
-        cmd.append(str(value))
-    for key, value in params['server'].items():
-        cmd.append('-' + str(key))
-        cmd.append(str(value))
-
     print(cmd)
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     output, error = proc.communicate()
@@ -78,7 +89,7 @@ if __name__ == '__main__':
 #    pyBot = PythonBot('python3 main.py', './script/pybot.json', params['blockedCells'], params['moves'])
     bot1.WriteJson('./import/bot1.json')
     bot2.WriteJson('./import/bot2.json')
-    scores = Server(bot1,bot2, params)
+    scores = Server(bot1 = bot1, bot2 = bot2, params= params, generatedCells = [])
     print(scores)
     '''
     bots = []

@@ -70,11 +70,7 @@ int main(int argc, const char* argv[])
     std::vector<std::string> players = parser.GetParam("-player", true);
     std::string server = parser.GetParam("-server");
     const bool debug = std::stoi(parser.GetParam("-debug"));
-    std::string graphPath = parser.GetParam("-graphPath");
     const int rounds = std::stoi(parser.GetParam( "-rounds"));
-    std::string blockedCells = parser.GetParam("-blockedCells");
-    std::string moves = parser.GetParam("-moves");
-    std::string debugServer = parser.GetParam("-debugServer");
     assert(rounds > 0);
     assert(players.size() >= 2);
     
@@ -99,10 +95,6 @@ int main(int argc, const char* argv[])
                 std::string cmd = server;
                 Add(cmd,"-player1", players[i]);
                 Add(cmd,"-player2", players[j]);
-                Add(cmd,"-graphPath", graphPath);
-                Add(cmd,"-blockedCells", blockedCells);
-                Add(cmd,"-moves", moves);
-                Add(cmd,"-debug", debugServer);
 //                fprintf(stderr, "cmd = %s\n", cmd.c_str());
 //                fflush(stderr);
                 FILE* pipe = popen(cmd.c_str(), "r+");
