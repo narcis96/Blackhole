@@ -18,18 +18,18 @@
 	"compileOptions":
 	{
 		"-include": "../ParamParser/ParamParser.h",
-		"flags":[ " -Wall", " -O3", " -std=c++11"," -lstdc++"]
+		"flags":[" -Wall", " -O3", " -std=c++11"," -lstdc++"]
 	},
 	"server":
 	{
-		"debug": 1,
+		"debug": 0,
 		"printMoves": 0,
-		"generatedCells": 0
+		"generatedCells": 5
 	},
 	"manager":
 	{
 		"debug": 1,
-		"rounds": 7
+		"rounds": 6
 	},
 	"level":
 	{

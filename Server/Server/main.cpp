@@ -18,6 +18,12 @@
 #include <chrono>
 #include <random>
 #include "../../ParamParser/ParamParser.h"
+enum class CellState {
+    EMPTY,
+    BLOCKED,
+    PLAYER1,
+    PLAYER2
+};
 class RandomGenerator
 {
 public:
@@ -28,26 +34,26 @@ public:
         return dist(gen) % x;
     }
 };
-std::pair<int, int> GetPoints(const std::vector<int>& states,
+std::pair<int, int> GetPoints(const std::vector<CellState>& states,
                               const std::vector<int>& values, const std::vector<int>&neighbors)
 {
     std::pair< int, int> points;
     for (const auto &x: neighbors)
-        if (states[x] == 0) {
+        if (states[x] == CellState::PLAYER1) {
             points.first += values[x];
             points.second -= values[x];
-        } else if(states[x] == 1){
+        } else if(states[x] == CellState::PLAYER2){
             points.second += values[x];
             points.first -= values[x];
         }
     return points;
 }
-int GetEmptyCell(const std::vector<int>& states)
+int GetEmptyCell(const std::vector<CellState>& states)
 {
     int count = 0;
     int emptyCell = 0;
     for (int i = 0; i < states.size(); i++) {
-        if (states[i] == -2) // the cell is empty
+        if (states[i] == CellState::EMPTY) // the cell is empty
         {
             count += 1;
             assert(count == 1 && "More that one cell empty");
@@ -104,10 +110,24 @@ int main(int argc, const char* argv[])
     const bool generatedCells = std::stoi(parser.GetParam("-generatedCells"));
     std::vector < std::vector <int > > graph = ReadGraph(parser.GetParam("-graphPath").c_str());
     
-    std::vector<int>cells(blockedCells, -1);
+    std::vector<int> values(graph.size(), -2);
+    std::vector<CellState> states(graph.size(), CellState::EMPTY);
+    std::vector<int>cells;
     if(generatedCells == true) {
         for(const auto& cell: parser.GetParam("-cell", true)) {
             cells.push_back(std::stoi(cell));
+        }
+    }
+    else {
+        cells.resize(blockedCells);
+        for (int i = 0; i < blockedCells; i++) {
+            int x;
+            do {
+                x = RandomGenerator::GetNumber(graph.size());    
+            } while (states[x] == CellState::BLOCKED);
+            states[x] = CellState::BLOCKED;
+            values[x] = 1;
+            cells[i] = x;
         }
     }
     assert(cells.size() == blockedCells && "Server: Not enough cells setted");
@@ -119,11 +139,7 @@ int main(int argc, const char* argv[])
     }
     std::pair<int, int> points[2];
     std::vector<int> playedValues[2][2];
-    
-    std::vector<int> values(graph.size(), -2);
-    std::vector<int> states(graph.size(), -2);
-
-    std::vector<int>games(1,0);
+    std::vector<int>games(1, 0);
     if(printMoves == false) {
         games.push_back(1);
     }
@@ -137,24 +153,11 @@ int main(int argc, const char* argv[])
             fflush(stderr);
             return EXIT_FAILURE;
         }
-        std::fill(values.begin(), values.end(), -2);
-        std::fill(states.begin(), states.end(), -2);
+        std::fill(values.begin(), values.end(), 0);
+        std::fill(states.begin(), states.end(), CellState::EMPTY);
 
-        if(generatedCells == false) {
-            for (int i = 0; i < blockedCells; i++) {
-                int x;
-                do {
-                    x = RandomGenerator::GetNumber(graph.size());    
-                } while (states[x] == -1);
-        
-                states[x] = -1;
-                values[x] = -1;                
-                cells[i] = x;
-            }
-        }
         for (const auto& x: cells) {
-            std::stringstream buff;
-            buff << x;
+            states[x] = CellState::BLOCKED;
             if (debug == true) {
                 fprintf(stderr, "Server(%d) : wrote %d\n", getpid(), x);
                 fflush(stderr);
@@ -164,7 +167,7 @@ int main(int argc, const char* argv[])
                 fflush(stdout);        
             }
             for (int id = 0; id < 2; id++) {
-                fprintf(clients[id], "%s\n", buff.str().c_str());
+                fprintf(clients[id], "%d\n", x);
                 fflush(clients[id]);
             }
         }
@@ -197,10 +200,9 @@ int main(int argc, const char* argv[])
             assert(0 <= indx  && indx < graph.size() && "Server :Index out of boundaries");
             assert(1 <= val && val <= moves &&
                    "Server: Not a valid move, value is wrong");
-            assert(values[indx] == -2 && states[indx] == -2 &&
-                   "Server :Not a valid move, the cell is not empty");
+            assert(states[indx] == CellState::EMPTY && "Server :Not a valid move, the cell is not empty");
             playedValues[first][turn].push_back(val);
-            states[indx] = turn;
+            states[indx] = (turn == 0 ? CellState::PLAYER1 : CellState::PLAYER2);
             values[indx] = val;
             
             turn = turn ^ 1;

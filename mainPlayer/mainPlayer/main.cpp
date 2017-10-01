@@ -241,7 +241,39 @@ private:
         }
         return cost;
     }
-    
+    double GetTableCost()
+    {
+        double cost = 0, count = 0;
+        for (const auto& i : m_freeCells) {
+            #if defined (USE_ASSERT)
+            assert (m_cellState[i] == CellState::EMPTY) 
+            #endif
+            int win = GetWin(i);
+            if (win != 0) {
+                if (win > 0) {
+                    cost += m_func(win);
+                    count += 1;
+                } else {
+                    cost -= m_func(-win);
+                     count -= 1;
+                }
+            }
+        }
+        std::vector<double> para{cost, 1.5*count};
+        std::vector<double> w(para.size(), 0);
+        if (m_freeCells.size() >= m_step3) {
+            w[0] = 0.4;     w[1] = 0.6;
+        }
+        else {
+            w[0] = 0.6;     w[1] = 0.4;
+        }
+        cost = 0;
+        for (int i = 0; i < para.size(); i++) {
+            cost += 1.0*para[i] * w[i];
+        }
+        return cost;
+    }
+
     std::tuple<double, int, int> GetMinMaxTree(const bool& turn, const unsigned long& stopSize, const bool& stopFinal)
     {
         if (stopFinal == true) {
@@ -270,28 +302,7 @@ private:
             }
         } else {
             if (m_freeCells.size() == stopSize) {
-                double cost = 0;
-                int count = 0;
-                for (const auto& i : m_freeCells) {
-                    if (m_cellState[i] == CellState::EMPTY) {
-                        int win = GetWin(i);
-                        if (win != 0) {
-                            if (win > 0) {
-                                cost += m_func(win);
-                                count += 1;
-                            } else {
-                                cost -= m_func(-win);
-                                count -= 1;
-                            }
-                        }
-                    }
-                }
-                std::vector<double> para{cost, 1.0*count};
-                std::vector<double> w{0.6, 0.4};
-                cost = 0;
-                for (int i = 0; i < para.size(); i++) {
-                    cost += 1.0*para[i] * w[i];
-                }
+                double cost = GetTableCost();
                 return std::make_tuple(cost, -1, -1);
             }
         }
@@ -332,10 +343,10 @@ private:
         }
         for (const auto& cell : cells) {
             if (GetNeighbors(cell) == 0) {
-                if (turn == 1) {
+                if (turn == 1) { // my turn
                     availableValues.clear();
                     availableValues.insert(*m_availableValues.begin());
-                } else {
+                } else { // opponent turn
                     availableValues.clear();
                     availableValues.insert(*m_opponentAvailableValues.begin());
                 }
@@ -372,10 +383,15 @@ private:
 
 
 			if (turn == 0) {
-                int i = 0;
-                for (auto it = sons.begin(); it != sons.end() && i < m_probabilities.size(); it++, i += 1) {
-                    if (1 + RandomGenerator::GetNumber(100) <= m_probabilities[i]) {
-                        answer = std::make_tuple(*it, -1, -1);
+                auto it = sons.begin();
+                answer = std::make_tuple(*it, -1, -1);
+                if (stopFinal == false) {
+                    int i = 0;           
+                    double cost = GetTableCost();                    
+                    for (it++; it != sons.end() && i < m_probabilities.size(); it++, i += 1) {
+                        if (1.0 + RandomGenerator::GetNumber(100) <= cost + m_probabilities[i]) {
+                            answer = std::make_tuple(*it, -1, -1);
+                        }
                     }
                 }
 			}
@@ -466,9 +482,6 @@ private:
     std::unordered_set<int> m_freeCells;
     std::set<int> m_availableValues;
     std::set<int> m_opponentAvailableValues;
-//    const int dx[6] = { 0, 0, -1, 1, -1, 1 };
-//    const int dy[6] = { 1, -1, 0, 0, -1, 1 };
-
     const std::vector<std::vector<int>> m_graph;
     const int m_totalMoves;
     const long double* const m_weights;
@@ -763,12 +776,12 @@ int main(int argc, const char* argv[])
     blockedCells = 5;
     moves = 15;
     step3 = 16;
-    step4 = 13;
-    stopFinal = 9;
+    step4 = 12;
+    stopFinal = 8;
     startMoves = 4;
     toErase = 22;
     weights = std::vector <long double>{0.7, 0.85, 1}; //I win, zero, opponent
-    probabilities = std::vector <int>{100, 0, 0};//first, second, third opponent mistake
+    probabilities = std::vector <int>{50, 25};///second, third opponent mistake
     graphStr = GetGraph(NULL);
     func = "x";
     func2 = "sqrt";
