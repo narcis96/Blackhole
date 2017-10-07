@@ -19,7 +19,7 @@ class CBot(object):
                + ' -step3 ' + str(self.step3) + ' -step4 ' + str(self.step4)\
                + ' -stopFinal ' + str(self.stopFinal) + ' -erase ' + str(self.toErase)\
                + ' -probabilities ' + str(self.probabilities[0]) + ','+str(self.probabilities[1])\
-               + ',' + str(self.probabilities[2]) + ','+str(self.probabilities[3])
+               + ',' + str(self.probabilities[2])
     def __ToJson(self):
         return json.dumps(self, default=lambda o: o.__dict__,
             sort_keys=True, indent=4)

@@ -43,7 +43,7 @@ enum class CellState
 class RandomGenerator
 {
 public:
-    static int GetNumber(const int x) {
+    static int GetNumber(const unsigned long x) {
         static auto d = std::chrono::system_clock::now().time_since_epoch();
         static std::mt19937 gen(std::chrono::duration_cast<std::chrono::milliseconds>(d).count());
         static std::uniform_int_distribution <int> dist(1, 1<<14);
@@ -58,7 +58,7 @@ public:
                     const long double* weights, const unsigned long& stopFinal,
                     const int& startMoves, const int& step3, const int& step4,
                     const int& toErase, std::vector<int> &probabilities,
-                    const char* func, const char* func2 = NULL)
+                    const char* func)
     : m_turn(0)
     , m_graph(graph)
     , m_totalMoves(moves)
@@ -119,6 +119,10 @@ public:
 #endif
         m_turn += 1;
         
+#ifdef MY_DEBUG
+        std::cerr << CLIENT <<" turn = " << m_turn << " values.size() = "  << m_availableValues.size() << std::endl << std::flush;
+#endif
+        
         std::tuple<int, int> answer(-1, -1);
         if (m_turn <= m_startMoves) {
             auto maxPos = std::max_element(m_freeCells.begin(), m_freeCells.end(),
@@ -126,15 +130,14 @@ public:
                                  return GetCost(pos1) < GetCost(pos2);
                              });
             auto it = m_availableValues.rbegin();
-            for (int i = 3; i <= 4; i++) {
-                if (1 + RandomGenerator::GetNumber(10) <= i)
-                    it++;
-            }
+            int count = 1 + RandomGenerator::GetNumber(std::min(m_availableValues.size(), 8ul));
+            for (int i = 3; i <= count; i++)
+                it++;
             answer = std::tuple<int, int>(*maxPos, *it);
         } else {
             if (IsFinal() == true) {
 #ifdef MY_DEBUG
-                std::cerr << CLIENT << "reach final" << std::endl << std::flush;
+                std::cerr << CLIENT << "reach final, values.size() = "  << m_availableValues.size() << std::endl << std::flush;
 #endif
                 auto positions = GetLastPositions();
                 auto minPos = std::min_element(positions.begin(), positions.end(),
@@ -151,17 +154,14 @@ public:
                 if (m_freeCells.size() <= m_step4)
                     steps = 4;
                 
-                bool stopFinal = false;
-                if (m_freeCells.size() <= m_stopFinal) {
-                    stopFinal = true;
-                }
+                bool stopFinal = (m_freeCells.size() <= m_stopFinal);
 #ifdef MY_DEBUG
                 std::cerr << CLIENT << "starts computing mix-max tree size = "
-                << m_freeCells.size() << " stopFinal = " << stopFinal
+                << m_freeCells.size() << " stopFinal = " << stopFinal << " steps = " << steps
                 << std::endl
                 << std::flush;
 #endif
-                auto ret = GetMinMaxTree(1, m_freeCells.size() - steps, stopFinal);
+                auto ret = GetMinMaxTree(CellState::MINE, m_freeCells.size() - steps, stopFinal);
                 answer = std::tuple<int,int>(std::get<1>(ret),std::get<2>(ret));
 #ifdef MY_DEBUG
                 std::cerr << CLIENT << "finished computing mix-max tree" << std::endl
@@ -169,12 +169,14 @@ public:
 #endif
             }
         }
-        
         int i, val;
         std::tie(i, val) = answer;
 #ifdef MY_DEBUG
         std::cerr << CLIENT << "found " << i << " " << val << std::endl
         << std::flush;
+#endif
+#ifdef USE_ASSERT
+        assert(std::get<0>(answer) >= 0 && std::get<1>(answer) >= 1);
 #endif
         MarkMine(i, val);
         return answer;
@@ -246,7 +248,7 @@ private:
         double cost = 0, count = 0;
         for (const auto& i : m_freeCells) {
             #if defined (USE_ASSERT)
-            assert (m_cellState[i] == CellState::EMPTY) 
+            assert (m_cellState[i] == CellState::EMPTY);
             #endif
             int win = GetWin(i);
             if (win != 0) {
@@ -255,17 +257,17 @@ private:
                     count += 1;
                 } else {
                     cost -= m_func(-win);
-                     count -= 1;
+                    count -= 1;
                 }
             }
         }
-        std::vector<double> para{cost, 1.5*count};
+        std::vector<double> para{cost, count};
         std::vector<double> w(para.size(), 0);
         if (m_freeCells.size() >= m_step3) {
-            w[0] = 0.4;     w[1] = 0.6;
+            w[0] = 1;     w[1] = 2;
         }
         else {
-            w[0] = 0.6;     w[1] = 0.4;
+            w[0] = 2;     w[1] = 0.7;
         }
         cost = 0;
         for (int i = 0; i < para.size(); i++) {
@@ -274,7 +276,7 @@ private:
         return cost;
     }
 
-    std::tuple<double, int, int> GetMinMaxTree(const bool& turn, const unsigned long& stopSize, const bool& stopFinal)
+    std::tuple<double, int, int> GetMinMaxTree(const CellState& turn, const unsigned long& stopSize, const bool& stopFinal)
     {
         if (stopFinal == true) {
 #ifdef MY_DEBUG
@@ -284,7 +286,7 @@ private:
 //                << std::flush;
 #endif
             if (IsFinal() == true) {
-                bool currentTurn = turn;
+                bool currentTurn = (turn==CellState::MINE? 1 : 0);
                 auto positions = GetLastPositions();
                 std::sort(positions.begin(), positions.end(),
                           [&](const int& pos1,
@@ -302,25 +304,21 @@ private:
             }
         } else {
             if (m_freeCells.size() == stopSize) {
-                double cost = GetTableCost();
-                return std::make_tuple(cost, -1, -1);
+                return std::make_tuple(GetTableCost(), -1, -1);
             }
         }
-        std::deque<int> cells;
-        for (auto cell : m_freeCells)
-            cells.push_back(cell);
+        std::deque<int> cells(m_freeCells.begin(), m_freeCells.end());
         
-        std::tuple<double, int ,int> answer(0, -1, -1);
-        std::set<int> availableValues;
+        std::tuple<double, int ,int> answer(0, -2, -2);
+        std::vector<int> availableValues;
         
         std::set<int>* from;
-        if (turn == 1) // my turn
-        {
-            answer = std::tuple<double, int ,int> (-1000.0, -1, -1);
+        if (turn == CellState::MINE) {
+            answer = std::tuple<double, int ,int> (std::numeric_limits<double>::lowest(), -5, -5);
             from = &m_availableValues;
-        } else // opponent turn
-        {
-            answer = std::tuple<double, int ,int> (1000.0, -1, -1);
+        }
+        else {
+            answer = std::tuple<double, int ,int> (std::numeric_limits<double>::max(), -6, -6);
             from = &m_opponentAvailableValues;
         }
         if (m_erase != -1 && stopFinal == false) {
@@ -330,48 +328,50 @@ private:
                           return GetWin(pos1) < GetWin(pos2);
                       });
             if (cells.size() >= m_erase) {
-                if (turn == 1) {
+                if (turn == CellState::MINE) {
                     cells.pop_back();
                 } else {
                     cells.pop_front();
                 }
             }
-            if (turn == 1)
+            if (turn == CellState::MINE)
                 cells.pop_back();
             else
                 cells.pop_front();
         }
         for (const auto& cell : cells) {
             if (GetNeighbors(cell) == 0) {
-                if (turn == 1) { // my turn
+                if (turn == CellState::MINE) {
                     availableValues.clear();
-                    availableValues.insert(*m_availableValues.begin());
-                } else { // opponent turn
+                    availableValues.push_back(*m_availableValues.begin());
+                } else {
                     availableValues.clear();
-                    availableValues.insert(*m_opponentAvailableValues.begin());
+                    availableValues.push_back(*m_opponentAvailableValues.begin());
                 }
             } else {
-                if (turn == 1)
-                    availableValues = m_availableValues;
-                else
-                    availableValues = m_opponentAvailableValues;
+                if (availableValues.size() <= 1) {
+                    if (turn == CellState::MINE)
+                        availableValues.assign(m_availableValues.begin(), m_availableValues.end());
+                    else
+                        availableValues.assign(m_opponentAvailableValues.begin(), m_opponentAvailableValues.end());
+                }
             }
 			std::set < double >sons;
             for (const auto& value : availableValues) {
-                if (turn == 1) {
+                if (turn == CellState::MINE) {
                     MarkMine(cell, value);
                 } else {
                     SetOpponetCell(cell, value);
                 }
                 
-                auto sonBest = GetMinMaxTree(turn ^ 1, stopSize, stopFinal);
+                auto sonBest = GetMinMaxTree((turn==CellState::MINE?(CellState::OPPONENT):(CellState::MINE)), stopSize, stopFinal);
                 
                 from->insert(value);
                 m_cellState[cell] = CellState::EMPTY;
                 m_cellValues[cell] = 0;
                 m_freeCells.insert(cell);
                 
-				if (turn == 1) {
+                if (turn == CellState::MINE) {
 					if (std::get<0>(answer) < std::get<0>(sonBest)) {
 						answer = std::make_tuple(std::get<0>(sonBest), cell, value);
 					}
@@ -381,16 +381,20 @@ private:
 				}
             }
 
-
-			if (turn == 0) {
+            if (turn == CellState::OPPONENT) {
                 auto it = sons.begin();
-                answer = std::make_tuple(*it, -1, -1);
+                answer = std::make_tuple(*it, -3, -3);
                 if (stopFinal == false) {
                     int i = 0;           
-                    double cost = GetTableCost();                    
+                    double cost = (*it);
                     for (it++; it != sons.end() && i < m_probabilities.size(); it++, i += 1) {
+#ifdef MY_DEBUG
+                        std::cerr << CLIENT << "cost = " << cost + m_probabilities[i] << std::endl
+                        << std::flush;
+#endif
+                        
                         if (1.0 + RandomGenerator::GetNumber(100) <= cost + m_probabilities[i]) {
-                            answer = std::make_tuple(*it, -1, -1);
+                            answer = std::make_tuple(*it, -4, -4);
                         }
                     }
                 }
@@ -492,178 +496,8 @@ private:
     const int m_step3;
     const int m_step4;
     std::function<long double(int)>m_func;
-    std::function<long double(int)>m_func2;
 };
-const char *graph = 
-"36\n\
-0 1\n\
-0 2\n\
-1 0\n\
-1 2\n\
-1 3\n\
-1 4\n\
-2 0\n\
-2 1\n\
-2 4\n\
-2 5\n\
-3 1\n\
-3 4\n\
-3 6\n\
-3 7\n\
-4 1\n\
-4 2\n\
-4 3\n\
-4 5\n\
-4 7\n\
-4 8\n\
-5 2\n\
-5 4\n\
-5 8\n\
-5 9\n\
-6 3\n\
-6 7\n\
-6 10\n\
-6 11\n\
-7 3\n\
-7 4\n\
-7 6\n\
-7 8\n\
-7 11\n\
-7 12\n\
-8 4\n\
-8 5\n\
-8 7\n\
-8 9\n\
-8 12\n\
-8 13\n\
-9 5\n\
-9 8\n\
-9 13\n\
-9 14\n\
-10 6\n\
-10 11\n\
-10 15\n\
-10 16\n\
-11 6\n\
-11 7\n\
-11 10\n\
-11 12\n\
-11 16\n\
-11 17\n\
-12 7\n\
-12 8\n\
-12 11\n\
-12 13\n\
-12 17\n\
-12 18\n\
-13 8\n\
-13 9\n\
-13 12\n\
-13 14\n\
-13 18\n\
-13 19\n\
-14 9\n\
-14 13\n\
-14 19\n\
-14 20\n\
-15 10\n\
-15 16\n\
-15 21\n\
-15 22\n\
-16 10\n\
-16 11\n\
-16 15\n\
-16 17\n\
-16 22\n\
-16 23\n\
-17 11\n\
-17 12\n\
-17 16\n\
-17 18\n\
-17 23\n\
-17 24\n\
-18 12\n\
-18 13\n\
-18 17\n\
-18 19\n\
-18 24\n\
-18 25\n\
-19 13\n\
-19 14\n\
-19 18\n\
-19 20\n\
-19 25\n\
-19 26\n\
-20 14\n\
-20 19\n\
-20 26\n\
-20 27\n\
-21 15\n\
-21 22\n\
-21 28\n\
-21 29\n\
-22 15\n\
-22 16\n\
-22 21\n\
-22 23\n\
-22 29\n\
-22 30\n\
-23 16\n\
-23 17\n\
-23 22\n\
-23 24\n\
-23 30\n\
-23 31\n\
-24 17\n\
-24 18\n\
-24 23\n\
-24 25\n\
-24 31\n\
-24 32\n\
-25 18\n\
-25 19\n\
-25 24\n\
-25 26\n\
-25 32\n\
-25 33\n\
-26 19\n\
-26 20\n\
-26 25\n\
-26 27\n\
-26 33\n\
-26 34\n\
-27 20\n\
-27 26\n\
-27 34\n\
-27 35\n\
-28 21\n\
-28 29\n\
-29 21\n\
-29 22\n\
-29 28\n\
-29 30\n\
-30 22\n\
-30 23\n\
-30 29\n\
-30 31\n\
-31 23\n\
-31 24\n\
-31 30\n\
-31 32\n\
-32 24\n\
-32 25\n\
-32 31\n\
-32 33\n\
-33 25\n\
-33 26\n\
-33 32\n\
-33 34\n\
-34 26\n\
-34 27\n\
-34 33\n\
-34 35\n\
-35 27\n\
-35 34\n";
+
 #ifdef LOCAL
 std::string GetGraph(const char* graphPath)
 {
@@ -682,6 +516,176 @@ std::string GetGraph(const char* graphPath)
 #else
 std::string GetGraph(const char*)
 {
+    const char *graph =
+    "36\n\
+    0 1\n\
+    0 2\n\
+    1 0\n\
+    1 2\n\
+    1 3\n\
+    1 4\n\
+    2 0\n\
+    2 1\n\
+    2 4\n\
+    2 5\n\
+    3 1\n\
+    3 4\n\
+    3 6\n\
+    3 7\n\
+    4 1\n\
+    4 2\n\
+    4 3\n\
+    4 5\n\
+    4 7\n\
+    4 8\n\
+    5 2\n\
+    5 4\n\
+    5 8\n\
+    5 9\n\
+    6 3\n\
+    6 7\n\
+    6 10\n\
+    6 11\n\
+    7 3\n\
+    7 4\n\
+    7 6\n\
+    7 8\n\
+    7 11\n\
+    7 12\n\
+    8 4\n\
+    8 5\n\
+    8 7\n\
+    8 9\n\
+    8 12\n\
+    8 13\n\
+    9 5\n\
+    9 8\n\
+    9 13\n\
+    9 14\n\
+    10 6\n\
+    10 11\n\
+    10 15\n\
+    10 16\n\
+    11 6\n\
+    11 7\n\
+    11 10\n\
+    11 12\n\
+    11 16\n\
+    11 17\n\
+    12 7\n\
+    12 8\n\
+    12 11\n\
+    12 13\n\
+    12 17\n\
+    12 18\n\
+    13 8\n\
+    13 9\n\
+    13 12\n\
+    13 14\n\
+    13 18\n\
+    13 19\n\
+    14 9\n\
+    14 13\n\
+    14 19\n\
+    14 20\n\
+    15 10\n\
+    15 16\n\
+    15 21\n\
+    15 22\n\
+    16 10\n\
+    16 11\n\
+    16 15\n\
+    16 17\n\
+    16 22\n\
+    16 23\n\
+    17 11\n\
+    17 12\n\
+    17 16\n\
+    17 18\n\
+    17 23\n\
+    17 24\n\
+    18 12\n\
+    18 13\n\
+    18 17\n\
+    18 19\n\
+    18 24\n\
+    18 25\n\
+    19 13\n\
+    19 14\n\
+    19 18\n\
+    19 20\n\
+    19 25\n\
+    19 26\n\
+    20 14\n\
+    20 19\n\
+    20 26\n\
+    20 27\n\
+    21 15\n\
+    21 22\n\
+    21 28\n\
+    21 29\n\
+    22 15\n\
+    22 16\n\
+    22 21\n\
+    22 23\n\
+    22 29\n\
+    22 30\n\
+    23 16\n\
+    23 17\n\
+    23 22\n\
+    23 24\n\
+    23 30\n\
+    23 31\n\
+    24 17\n\
+    24 18\n\
+    24 23\n\
+    24 25\n\
+    24 31\n\
+    24 32\n\
+    25 18\n\
+    25 19\n\
+    25 24\n\
+    25 26\n\
+    25 32\n\
+    25 33\n\
+    26 19\n\
+    26 20\n\
+    26 25\n\
+    26 27\n\
+    26 33\n\
+    26 34\n\
+    27 20\n\
+    27 26\n\
+    27 34\n\
+    27 35\n\
+    28 21\n\
+    28 29\n\
+    29 21\n\
+    29 22\n\
+    29 28\n\
+    29 30\n\
+    30 22\n\
+    30 23\n\
+    30 29\n\
+    30 31\n\
+    31 23\n\
+    31 24\n\
+    31 30\n\
+    31 32\n\
+    32 24\n\
+    32 25\n\
+    32 31\n\
+    32 33\n\
+    33 25\n\
+    33 26\n\
+    33 32\n\
+    33 34\n\
+    34 26\n\
+    34 27\n\
+    34 33\n\
+    34 35\n\
+    35 27\n\
+    35 34\n";
 	return std::string(graph);
 }
 #endif
@@ -778,13 +782,12 @@ int main(int argc, const char* argv[])
     step3 = 16;
     step4 = 12;
     stopFinal = 8;
-    startMoves = 4;
-    toErase = 22;
+    startMoves = 3;
+    toErase = 12;
     weights = std::vector <long double>{0.7, 0.85, 1}; //I win, zero, opponent
-    probabilities = std::vector <int>{50, 25};///second, third opponent mistake
+    probabilities = std::vector <int>{0, -20};///second, third opponent mistake
     graphStr = GetGraph(NULL);
-    func = "x";
-    func2 = "sqrt";
+    func = "log";
 #endif
 #ifdef MY_DEBUG
 //    std::cerr << CLIENT << "weights= " << weights[0]<< " " << weights[1] <<" " << weights[2]<< std::endl

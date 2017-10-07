@@ -80,10 +80,10 @@ if __name__ == '__main__':
         sys.exit(-1)
     print ('Compile successful')
 
-    bot1 = CBot(weights=[0.7, 0.85, 1],executable = sourceName, probabilities = [100, 0, 0, 0], func = 'log', startMoves=4, step3=16, step4=13, stopFinal=9, toErase = -1)
+    bot1 = CBot(weights=[0.7, 0.85, 1],executable = sourceName, probabilities = [50, 35, 0], func = 'log', startMoves=4, step3=16, step4=13, stopFinal=9, toErase = -1)
 #    bot2 = CBot(weights=[0.7, 0.85, 1],executable = sourceName, probabilities = [100, 0, 0, 0], func = 'log', startMoves=4, step3=15, step4=13, stopFinal=9, toErase = -1)
 #    bot3 = CBot(weights=[0.7, 0.85, 1],executable = sourceName, probabilities = [100, 0, 0, 0], func = 'x', startMoves=4, step3=16, step4=13, stopFinal=9, toErase = -1)
-    bot4 = CBot(weights=[0.7, 0.85, 1],executable = sourceName, probabilities = [100, 0, 0, 0], func = 'x', startMoves=4, step3=15, step4=13, stopFinal=9, toErase = -1)
+    bot4 = CBot(weights=[0.7, 0.85, 1],executable = sourceName, probabilities = [50, 35, 0], func = 'x', startMoves=4, step3=15, step4=13, stopFinal=9, toErase = -1)
 
     dna = DNA.ReadFromJson('./bots/9.json')
     #print(dna.arhitecture)
@@ -94,7 +94,7 @@ if __name__ == '__main__':
     bot1.WriteJson('./import/bot1.json')
     bot4.WriteJson('./import/bot2.json')
     scores = []
-    for i in range(10):
+    for i in range(1):
         blockedCells = [1, 2, 3, 4, 5]
         scores.append(Server(bot1 = bot1, bot2 = bot4, params= params, generatedCells = blockedCells))
     print(scores)

@@ -15,7 +15,7 @@
 
 	"server":
 	{
-		"debug": 0,
+		"debug": 1,
 		"printMoves": 1,
 		"generatedCells": 0
 	},

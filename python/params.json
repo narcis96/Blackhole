@@ -22,7 +22,7 @@
 	},
 	"server":
 	{
-		"debug": 0,
+		"debug": 1,
 		"printMoves": 0,
 		"generatedCells": 5
 	},

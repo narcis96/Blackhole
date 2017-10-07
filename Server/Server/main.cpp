@@ -147,6 +147,7 @@ int main(int argc, const char* argv[])
 //        clock_t start = clock();
         FILE* clients[2];
         clients[0] = popen(player1.c_str(), "r+");
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
         clients[1] = popen(player2.c_str(), "r+");
         if (clients[0] == NULL || clients[1] == NULL) {
             fprintf(stderr, "popen() failed");
